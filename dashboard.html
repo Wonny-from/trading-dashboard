@@ -61,7 +61,7 @@
 <p class="section-label">포트폴리오 요약</p>
 <div class="metric-grid-5">
   <div class="metric highlight"><div class="metric-label">총 자산</div><div class="metric-value" id="m-assets">—</div><div class="metric-sub" id="m-assets-sub"></div></div>
-  <div class="metric"><div class="metric-label">총 투자금액</div><div class="metric-value" id="m-total">—</div></div>
+  <div class="metric"><div class="metric-label">총 투자금액</div><div class="metric-value" id="m-total">—</div><div class="metric-sub" id="m-hold"></div></div>
   <div class="metric"><div class="metric-label">보유 현금</div><div class="metric-value" id="m-cash">—</div><div class="metric-sub" id="m-cash-sub"></div></div>
   <div class="metric"><div class="metric-label">실현 손익</div><div class="metric-value" id="m-pnl">—</div><div class="metric-sub" id="m-pct"></div></div>
   <div class="metric"><div class="metric-label">승률</div><div class="metric-value" id="m-win">—</div><div class="metric-sub" id="m-winsub"></div></div>
@@ -69,7 +69,7 @@
 
 <div class="charts-row">
   <div class="card">
-    <div class="card-title">종목별 투자금액</div>
+    <div class="card-title">보유 종목별 투자금액</div>
     <div class="legend-row">
       <div class="legend-item"><div class="legend-dot" style="background:#378ADD;"></div>국장</div>
       <div class="legend-item"><div class="legend-dot" style="background:#EF9F27;"></div>미장</div>
@@ -123,11 +123,19 @@ function render(rows, cashKRW, cashUSD, usdRate) {
   document.getElementById('sTxt').textContent = `연동 완료 · 매매 ${rows.length}건 · 환율 ${Math.round(usdRate).toLocaleString()}원 · ${new Date().toLocaleTimeString('ko-KR')}`;
   document.getElementById('lastUpdate').textContent = `마지막 업데이트: ${new Date().toLocaleString('ko-KR')}`;
 
-  const withPnl = rows.filter(r=>nv(r['손익(원)'])!==null&&!isNaN(nv(r['손익(원)'])));
-  const winners = withPnl.filter(r=>nv(r['손익(원)'])>0);
-  const totalInvest = rows.reduce((s,r)=>s+(nv(r['매수금액(원)'])||0),0);
-  const totalPnl = withPnl.reduce((s,r)=>s+(nv(r['손익(원)'])||0),0);
-  const pct = totalInvest>0?totalPnl/totalInvest*100:0;
+  // 보유중 / 매도완료 분리
+  const holding = rows.filter(r => String(r['상태']||'').includes('보유'));
+  const sold = rows.filter(r => String(r['상태']||'').includes('매도'));
+
+  // 실현 손익은 매도완료 기준
+  const totalPnl = sold.reduce((s,r) => s+(nv(r['손익(원)'])||0), 0);
+  const winners = sold.filter(r => nv(r['손익(원)']) > 0);
+  const pct = sold.length > 0 ? totalPnl / sold.reduce((s,r) => s+(nv(r['매수금액(원)'])||0), 0) * 100 : 0;
+
+  // 투자금액은 보유중 기준
+  const totalInvest = holding.reduce((s,r) => s+(nv(r['매수금액(원)'])||0), 0);
+  const kr = holding.filter(r => r['시장']==='국장').length;
+  const us = holding.filter(r => r['시장']==='미장').length;
 
   const cashUSDinKRW = cashUSD * usdRate;
   const totalCash = cashKRW + cashUSDinKRW;
@@ -136,31 +144,38 @@ function render(rows, cashKRW, cashUSD, usdRate) {
   document.getElementById('m-assets').textContent = fmtA(totalAssets);
   document.getElementById('m-assets-sub').textContent = '투자 + 현금 합계';
   document.getElementById('m-total').textContent = fmtA(totalInvest);
+  document.getElementById('m-hold').textContent = `국장 ${kr} / 미장 ${us} 보유중`;
   document.getElementById('m-cash').textContent = fmtA(totalCash);
   document.getElementById('m-cash-sub').textContent = `원화 ${Math.round(cashKRW).toLocaleString()}원 + $${cashUSD.toLocaleString()}`;
   const pEl = document.getElementById('m-pnl');
   pEl.textContent = fmtW(totalPnl);
   pEl.className = 'metric-value '+(totalPnl>=0?'pos':'neg');
   document.getElementById('m-pct').textContent = fmtP(pct)+' 전체';
-  document.getElementById('m-win').textContent = withPnl.length>0?(winners.length/withPnl.length*100).toFixed(1)+'%':'—';
-  document.getElementById('m-winsub').textContent = `${winners.length}승 ${withPnl.length-winners.length}패`;
+  document.getElementById('m-win').textContent = sold.length>0?(winners.length/sold.length*100).toFixed(1)+'%':'—';
+  document.getElementById('m-winsub').textContent = `${winners.length}승 ${sold.length-winners.length}패`;
 
-  const sorted = [...rows].sort((a,b)=>(nv(b['매수금액(원)'])||0)-(nv(a['매수금액(원)'])||0));
+  // 차트는 보유중 종목만
+  const sorted = [...holding].sort((a,b)=>(nv(b['매수금액(원)'])||0)-(nv(a['매수금액(원)'])||0));
   if (rChart) rChart.destroy();
-  rChart = new Chart(document.getElementById('retChart'), {
-    type:'bar',
-    data:{ labels:sorted.map(r=>r['종목']||''), datasets:[{data:sorted.map(r=>nv(r['매수금액(원)'])||0),backgroundColor:sorted.map(r=>r['시장']==='미장'?'#EF9F27':'#378ADD'),borderRadius:3,borderSkipped:false}]},
-    options:{ responsive:true, maintainAspectRatio:false,
-      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${Math.round(ctx.raw).toLocaleString()}원`}}},
-      scales:{
-        x:{ticks:{font:{size:10},color:'#aaa',maxRotation:45,autoSkip:false},grid:{display:false},border:{color:'#eee'}},
-        y:{ticks:{font:{size:10},color:'#aaa',callback:v=>(v/10000).toFixed(0)+'만'},grid:{color:'rgba(0,0,0,0.05)'},border:{color:'#eee'}}
-      }
-    }
-  });
 
-  const krAmt = rows.filter(r=>r['시장']==='국장').reduce((s,r)=>s+(nv(r['매수금액(원)'])||0),0);
-  const usAmt = rows.filter(r=>r['시장']==='미장').reduce((s,r)=>s+(nv(r['매수금액(원)'])||0),0);
+  if (sorted.length === 0) {
+    document.getElementById('retChart').parentElement.innerHTML = '<p style="text-align:center;color:#aaa;padding:4rem 0;font-size:13px;">보유 중인 종목 없음</p>';
+  } else {
+    rChart = new Chart(document.getElementById('retChart'), {
+      type:'bar',
+      data:{ labels:sorted.map(r=>r['종목']||''), datasets:[{data:sorted.map(r=>nv(r['매수금액(원)'])||0),backgroundColor:sorted.map(r=>r['시장']==='미장'?'#EF9F27':'#378ADD'),borderRadius:3,borderSkipped:false}]},
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${Math.round(ctx.raw).toLocaleString()}원`}}},
+        scales:{
+          x:{ticks:{font:{size:10},color:'#aaa',maxRotation:45,autoSkip:false},grid:{display:false},border:{color:'#eee'}},
+          y:{ticks:{font:{size:10},color:'#aaa',callback:v=>(v/10000).toFixed(0)+'만'},grid:{color:'rgba(0,0,0,0.05)'},border:{color:'#eee'}}
+        }
+      }
+    });
+  }
+
+  const krAmt = holding.filter(r=>r['시장']==='국장').reduce((s,r)=>s+(nv(r['매수금액(원)'])||0),0);
+  const usAmt = holding.filter(r=>r['시장']==='미장').reduce((s,r)=>s+(nv(r['매수금액(원)'])||0),0);
   const tot = totalAssets;
   document.getElementById('mktLegend').innerHTML = [
     ['국장 주식', krAmt, '#378ADD'],
@@ -178,7 +193,8 @@ function render(rows, cashKRW, cashUSD, usdRate) {
     }
   });
 
-  document.getElementById('tbody').innerHTML = rows.map(r=>{
+  // 매매 내역은 전체 (최신순)
+  document.getElementById('tbody').innerHTML = [...rows].reverse().map(r=>{
     const mkt=r['시장']||''; const state=String(r['상태']||'');
     const pv=nv(r['수익률(%)']); const pnlv=nv(r['손익(원)']);
     const rCls=pv===null||isNaN(pv)?'':pv>0?'pos':pv<0?'neg':'';
