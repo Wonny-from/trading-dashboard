@@ -154,8 +154,14 @@ function render(rows, cashKRW, cashUSD, usdRate) {
   document.getElementById('m-win').textContent = sold.length>0?(winners.length/sold.length*100).toFixed(1)+'%':'—';
   document.getElementById('m-winsub').textContent = `${winners.length}승 ${sold.length-winners.length}패`;
 
-  // 차트는 보유중 종목만
-  const sorted = [...holding].sort((a,b)=>(nv(b['매수금액(원)'])||0)-(nv(a['매수금액(원)'])||0));
+  // 차트는 보유중 종목만 — 같은 종목 합산
+  const holdingMap = {};
+  holding.forEach(r => {
+    const key = r['종목'] + '|' + (r['시장']||'');
+    if (!holdingMap[key]) holdingMap[key] = { 종목: r['종목'], 시장: r['시장']||'', amount: 0 };
+    holdingMap[key].amount += (nv(r['매수금액(원)'])||0);
+  });
+  const sorted = Object.values(holdingMap).sort((a,b)=>b.amount-a.amount);
   if (rChart) rChart.destroy();
 
   if (sorted.length === 0) {
@@ -163,7 +169,7 @@ function render(rows, cashKRW, cashUSD, usdRate) {
   } else {
     rChart = new Chart(document.getElementById('retChart'), {
       type:'bar',
-      data:{ labels:sorted.map(r=>r['종목']||''), datasets:[{data:sorted.map(r=>nv(r['매수금액(원)'])||0),backgroundColor:sorted.map(r=>r['시장']==='미장'?'#EF9F27':'#378ADD'),borderRadius:3,borderSkipped:false}]},
+      data:{ labels:sorted.map(r=>r['종목']||''), datasets:[{data:sorted.map(r=>r.amount),backgroundColor:sorted.map(r=>r['시장']==='미장'?'#EF9F27':'#378ADD'),borderRadius:3,borderSkipped:false}]},
       options:{ responsive:true, maintainAspectRatio:false,
         plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${Math.round(ctx.raw).toLocaleString()}원`}}},
         scales:{
