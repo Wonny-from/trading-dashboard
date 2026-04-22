@@ -99,6 +99,7 @@
 <script>
 const TRADE_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRgDk4qNXL-ByfHEPG7pwnK8Zz96-IPU5GlC0D_kFipnAkKiBtSIvyQsnZWZ0uofAA51iqxOCsZ2-_W/pub?gid=512959016&single=true&output=csv';
 const CASH_CSV  = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRgDk4qNXL-ByfHEPG7pwnK8Zz96-IPU5GlC0D_kFipnAkKiBtSIvyQsnZWZ0uofAA51iqxOCsZ2-_W/pub?gid=2018962040&single=true&output=csv';
+const ASSET_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRgDk4qNXL-ByfHEPG7pwnK8Zz96-IPU5GlC0D_kFipnAkKiBtSIvyQsnZWZ0uofAA51iqxOCsZ2-_W/pub?gid=1248725157&single=true&output=csv';
 
 const fmtA = v => { const x=Number(v); return (isNaN(x)||v===''||v===null)?'—':Math.round(x).toLocaleString('ko-KR')+'원'; };
 const fmtW = v => { const x=Number(v); return (isNaN(x)||v===''||v===null)?'—':(x>=0?'+':'')+Math.round(x).toLocaleString('ko-KR')+'원'; };
@@ -127,15 +128,39 @@ function render(rows, cashKRW, cashUSD, usdRate) {
   const holding = rows.filter(r => String(r['상태']||'').includes('보유'));
   const sold = rows.filter(r => String(r['상태']||'').includes('매도'));
 
-  // 실현 손익은 매도완료 기준
-  const totalPnl = sold.reduce((s,r) => s+(nv(r['손익(원)'])||0), 0);
-  const winners = sold.filter(r => nv(r['손익(원)']) > 0);
-  const pct = sold.length > 0 ? totalPnl / sold.reduce((s,r) => s+(nv(r['매수금액(원)'])||0), 0) * 100 : 0;
+  // 실현 손익은 매도완료 기준 — 종목별 합산 (분할매수 통합)
+  const soldMap = {};
+  sold.forEach(r => {
+    const key = r['종목'] + '|' + r['매수일'];
+    if (!soldMap[key]) soldMap[key] = { pnl: 0, buyAmt: 0 };
+    soldMap[key].pnl    += (nv(r['손익(원)'])||0);
+    soldMap[key].buyAmt += (nv(r['매수금액(원)'])||0);
+  });
+  // 같은 종목 같은날 매수분을 하나로 합산 후 종목 단위로 다시 합산
+  const soldByName = {};
+  sold.forEach(r => {
+    const name = r['종목'];
+    if (!soldByName[name]) soldByName[name] = { pnl: 0, buyAmt: 0 };
+    soldByName[name].pnl    += (nv(r['손익(원)'])||0);
+    soldByName[name].buyAmt += (nv(r['매수금액(원)'])||0);
+  });
+  const soldGroups  = Object.values(soldByName);
+  const totalPnl    = soldGroups.reduce((s,r) => s+r.pnl, 0);
+  const winners     = soldGroups.filter(r => r.pnl > 0);
+  const losers      = soldGroups.filter(r => r.pnl < 0);
+  const pct         = soldGroups.length > 0 ? totalPnl / soldGroups.reduce((s,r) => s+r.buyAmt, 0) * 100 : 0;
 
-  // 투자금액은 보유중 기준
-  const totalInvest = holding.reduce((s,r) => s+(nv(r['매수금액(원)'])||0), 0);
-  const kr = holding.filter(r => r['시장']==='국장').length;
-  const us = holding.filter(r => r['시장']==='미장').length;
+  // 투자금액은 보유중 기준 — 종목별 합산
+  const holdingByName = {};
+  holding.forEach(r => {
+    const name = r['종목'];
+    if (!holdingByName[name]) holdingByName[name] = { market: r['시장'], amt: 0 };
+    holdingByName[name].amt += (nv(r['매수금액(원)'])||0);
+  });
+  const holdingGroups = Object.values(holdingByName);
+  const totalInvest   = holdingGroups.reduce((s,r) => s+r.amt, 0);
+  const kr = holdingGroups.filter(r => r.market==='국장').length;
+  const us = holdingGroups.filter(r => r.market==='미장').length;
 
   const cashUSDinKRW = cashUSD * usdRate;
   const totalCash = cashKRW + cashUSDinKRW;
@@ -151,8 +176,8 @@ function render(rows, cashKRW, cashUSD, usdRate) {
   pEl.textContent = fmtW(totalPnl);
   pEl.className = 'metric-value '+(totalPnl>=0?'pos':'neg');
   document.getElementById('m-pct').textContent = fmtP(pct)+' 전체';
-  document.getElementById('m-win').textContent = sold.length>0?(winners.length/sold.length*100).toFixed(1)+'%':'—';
-  document.getElementById('m-winsub').textContent = `${winners.length}승 ${sold.length-winners.length}패`;
+  document.getElementById('m-win').textContent = soldGroups.length>0?(winners.length/soldGroups.length*100).toFixed(1)+'%':'—';
+  document.getElementById('m-winsub').textContent = `${winners.length}승 ${losers.length}패`;
 
   // 차트는 보유중 종목만 — 같은 종목 합산
   const holdingMap = {};
