@@ -83,6 +83,11 @@
   </div>
 </div>
 
+<div class="card-full" style="margin-bottom:1.5rem;">
+  <div class="card-title">총 자산 추이</div>
+  <div style="height:220px;position:relative;"><canvas id="assetChartCanvas"></canvas></div>
+</div>
+
 <div class="card-full">
   <div class="card-title">매매 내역</div>
   <div style="overflow-x:auto;">
@@ -116,6 +121,46 @@ function parseCsv(url) {
       complete: r => resolve(r.data),
       error: e => reject(e)
     });
+  });
+}
+
+function renderAssetChart(rows) {
+  if (!rows || rows.length < 2) return;
+  const validRows = rows.slice(1).filter(r => r[0] && r[4]);
+  if (validRows.length === 0) return;
+
+  const labels = validRows.map(r => r[0]);
+  const values = validRows.map(r => parseFloat(String(r[4]).replace(/,/g,'')) || 0);
+
+  const ctx = document.getElementById('assetChartCanvas');
+  if (!ctx) return;
+  if (window._assetChart) window._assetChart.destroy();
+  window._assetChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        data: values,
+        borderColor: '#378ADD',
+        backgroundColor: 'rgba(55,138,221,0.08)',
+        borderWidth: 2,
+        pointRadius: 3,
+        pointBackgroundColor: '#378ADD',
+        fill: true,
+        tension: 0.3,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ' ' + Math.round(ctx.raw).toLocaleString() + '원' } }
+      },
+      scales: {
+        x: { ticks: { font:{size:10}, color:'#aaa', maxRotation:45, autoSkip:true, maxTicksLimit:10 }, grid:{display:false} },
+        y: { ticks: { font:{size:10}, color:'#aaa', callback: v => (v/10000).toFixed(0)+'만' }, grid:{color:'rgba(0,0,0,0.05)'} }
+      }
+    }
   });
 }
 
@@ -249,15 +294,17 @@ async function run() {
   document.getElementById('sDot').style.background = '#BA7517';
   document.getElementById('sTxt').textContent = '구글 시트 연결 중...';
   try {
-    const [tradeRows, cashRows] = await Promise.all([
+    const [tradeRows, cashRows, assetRows] = await Promise.all([
       parseCsv(TRADE_CSV),
       parseCsv(CASH_CSV),
+      parseCsv(ASSET_CSV),
     ]);
     const cleanNum = v => Number(String(v || 0).replace(/,/g, ''));
     const cashKRW = cleanNum(cashRows.find(r=>r['구분']==='원화')?.['금액']);
     const cashUSD = cleanNum(cashRows.find(r=>r['구분']==='달러')?.['금액']);
     const usdRate = cleanNum(cashRows.find(r=>r['구분']==='환율')?.['금액']) || 1480;
     render(tradeRows, cashKRW, cashUSD, usdRate);
+    renderAssetChart(assetRows);
   } catch(e) {
     document.getElementById('sDot').style.background = '#D85A30';
     document.getElementById('sTxt').textContent = '오류: ' + e.message;
