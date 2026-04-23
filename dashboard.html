@@ -125,8 +125,9 @@ function parseCsv(url) {
 }
 
 function renderAssetChart(rows) {
-  if (!rows || rows.length < 2) return;
-  const validRows = rows.slice(1).filter(r => r[0] && r[4]);
+  if (!rows || rows.length < 1) return;
+  // 헤더 없이 데이터가 바로 시작됨 — slice(0)으로 전체 사용
+  const validRows = rows.filter(r => r[0] && r[4] && !isNaN(parseFloat(String(r[4]).replace(/,/g,''))));
   if (validRows.length === 0) return;
 
   const labels = validRows.map(r => r[0]);
