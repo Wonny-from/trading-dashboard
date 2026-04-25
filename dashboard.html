@@ -76,3 +76,121 @@
   <div class="metric"><div class="metric-label">실현 손익</div><div class="metric-value" id="m-pnl">—</div><div class="metric-sub" id="m-pct">—</div></div>
   <div class="metric"><div class="metric-label">승률</div><div class="metric-value" id="m-win">—</div><div class="metric-sub" id="m-winsub">—</div></div>
 </div>
+
+<div class="charts-row">
+  <div class="card"><div class="card-title">보유 종목 비중</div><div style="height:250px;"><canvas id="retChart"></canvas></div></div>
+  <div class="card"><div class="card-title">자산 구성 분포</div><div id="mktLegend" style="margin-bottom:10px; display:flex; gap:10px; font-size:12px;"></div><div style="height:250px;"><canvas id="mktChart"></canvas></div></div>
+</div>
+
+<div class="card-full">
+  <div class="card-title">상세 매매 내역</div>
+  <div id="accordion"></div>
+</div>
+
+<script>
+const TRADE_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRgDk4qNXL-ByfHEPG7pwnK8Zz96-IPU5GlC0D_kFipnAkKiBtSIvyQsnZWZ0uofAA51iqxOCsZ2-_W/pub?gid=512959016&single=true&output=csv';
+const CASH_CSV  = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRgDk4qNXL-ByfHEPG7pwnK8Zz96-IPU5GlC0D_kFipnAkKiBtSIvyQsnZWZ0uofAA51iqxOCsZ2-_W/pub?gid=2018962040&single=true&output=csv';
+
+const fmtA = v => isNaN(v) ? '—' : Math.round(v).toLocaleString() + '원';
+const fmtW = v => (v >= 0 ? '+' : '') + Math.round(v).toLocaleString() + '원';
+const fmtP = v => (v >= 0 ? '+' : '') + v.toFixed(2) + '%';
+// 2. 평단가: 국장만 소수점 제거 로직 적용
+const fmtPr = (v, mkt) => {
+  if (isNaN(v) || v === 0) return '—';
+  return mkt === '미장' ? '$' + v.toFixed(2) : Math.round(v).toLocaleString() + '원';
+};
+const nv = v => v ? Number(String(v).replace(/,/g, '')) : 0;
+
+let rChart, mChart;
+
+function parseCsv(url) {
+  return new Promise((resolve, reject) => {
+    Papa.parse(url + '&t=' + Date.now(), { download: true, header: true, complete: r => resolve(r.data), error: e => reject(e) });
+  });
+}
+
+function render(rows, cashKRW, cashUSD, usdRate) {
+  const holding = rows.filter(r => String(r['상태']).includes('보유'));
+  const sold = rows.filter(r => String(r['상태']).includes('매도'));
+
+  // 메트릭 계산
+  const totalInvest = holding.reduce((s, r) => s + nv(r['매수금액(원)']), 0);
+  const totalPnl = sold.reduce((s, r) => s + nv(r['손익(원)']), 0);
+  const totalBuyAmt = sold.reduce((s, r) => s + nv(r['매수금액(원)']), 0);
+  const cashUSDinKRW = cashUSD * usdRate;
+  const totalCash = cashKRW + cashUSDinKRW;
+  const totalAssets = totalInvest + totalCash;
+  const winCount = sold.filter(r => nv(r['손익(원)']) > 0).length;
+
+  // 화면 업데이트
+  document.getElementById('m-assets').textContent = fmtA(totalAssets);
+  document.getElementById('m-total').textContent = fmtA(totalInvest);
+  document.getElementById('m-cash').textContent = fmtA(totalCash);
+  document.getElementById('m-cash-sub').textContent = `₩${Math.round(cashKRW).toLocaleString()} / $${cashUSD}`;
+  document.getElementById('m-pnl').textContent = fmtW(totalPnl);
+  document.getElementById('m-pnl').className = 'metric-value ' + (totalPnl >= 0 ? 'pos' : 'neg');
+  document.getElementById('m-pct').textContent = totalBuyAmt ? fmtP(totalPnl / totalBuyAmt * 100) : '0%';
+  document.getElementById('m-win').textContent = sold.length ? (winCount / sold.length * 100).toFixed(1) + '%' : '—';
+  document.getElementById('m-winsub').textContent = `${winCount}승 ${sold.length - winCount}패`;
+
+  // 종목별 차트
+  const hMap = {};
+  holding.forEach(r => { hMap[r['종목']] = (hMap[r['종목']] || 0) + nv(r['매수금액(원)']); });
+  const sorted = Object.entries(hMap).sort((a, b) => b[1] - a[1]);
+
+  if (rChart) rChart.destroy();
+  rChart = new Chart(document.getElementById('retChart'), {
+    type: 'bar',
+    data: { labels: sorted.map(x => x[0]), datasets: [{ data: sorted.map(x => x[1]), backgroundColor: '#0066ff', borderRadius: 5 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+  });
+
+  // 자산 구성 차트
+  if (mChart) mChart.destroy();
+  mChart = new Chart(document.getElementById('mktChart'), {
+    type: 'doughnut',
+    data: { labels: ['국장','미장','원화현금','달러현금'], datasets: [{ data: [holding.filter(r=>r['시장']==='국장').reduce((s,r)=>s+nv(r['매수금액(원)']),0), holding.filter(r=>r['시장']==='미장').reduce((s,r)=>s+nv(r['매수금액(원)']),0), cashKRW, cashUSDinKRW], backgroundColor: ['#0066ff','#94a3b8','#16a34a','#f59e0b'] }] },
+    options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { display: false } } }
+  });
+
+  // 상세 내역 아코디언 빌드
+  const months = [...new Set(rows.map(r => String(r['매수일']).slice(0, 7)))].sort().reverse();
+  document.getElementById('accordion').innerHTML = months.map(m => {
+    const mRows = rows.filter(r => String(r['매수일']).startsWith(m));
+    const tBody = mRows.map(r => `
+      <tr>
+        <td class="name">${r['종목']}</td>
+        <td><span class="badge ${r['시장']==='미장'?'badge-us':'badge-kr'}">${r['시장']}</span></td>
+        <td>${r['매수일']}</td>
+        <td>${fmtPr(nv(r['매수가']), r['시장'])}</td>
+        <td>${r['수량']}</td>
+        <td>${fmtA(nv(r['매수금액(원)']))}</td>
+        <td class="${nv(r['손익(원)'])>=0?'pos':'neg'}">${r['상태'].includes('보유')?'—':fmtW(nv(r['손익(원)']))}</td>
+        <td><span class="badge ${r['상태'].includes('보유')?'badge-hold':'badge-sold'}">${r['상태']}</span></td>
+      </tr>`).join('');
+    return `<div class="month-group">
+      <div class="month-header" onclick="this.nextElementSibling.classList.toggle('open')"><strong>${m}</strong> <span>▼</span></div>
+      <div class="month-body"><table class="tbl"><thead><tr><th>종목</th><th>시장</th><th>매수일</th><th>평단가</th><th>수량</th><th>매수금액</th><th>손익</th><th>상태</th></tr></thead><tbody>${tBody}</tbody></table></div>
+    </div>`;
+  }).join('');
+}
+
+async function run() {
+  document.getElementById('sDot').style.background = '#f59e0b';
+  try {
+    const [trades, cash] = await Promise.all([parseCsv(TRADE_CSV), parseCsv(CASH_CSV)]);
+    const cashKRW = nv(cash.find(r => r['구분'] === '원화')?.['금액']);
+    const cashUSD = nv(cash.find(r => r['구분'] === '달러')?.['금액']);
+    const usdRate = nv(cash.find(r => r['구분'] === '환율')?.['금액']) || 1400;
+    render(trades, cashKRW, cashUSD, usdRate);
+    document.getElementById('sDot').style.background = '#16a34a';
+    document.getElementById('sTxt').textContent = '연동 완료';
+    document.getElementById('lastUpdate').textContent = '최근 업데이트: ' + new Date().toLocaleString();
+  } catch (e) {
+    document.getElementById('sTxt').textContent = '연결 오류';
+  }
+}
+run();
+</script>
+</body>
+</html>
