@@ -3,51 +3,54 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Wonny 매매일지</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<title>WONNY Portfolio Insight</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0b1520; color: #c8bfa8; padding: 2rem; min-height: 100vh; }
-  h1 { font-size: 20px; font-weight: 500; color: #e8d5a3; margin-bottom: 4px; letter-spacing: 0.03em; }
-  .subtitle { font-size: 12px; color: #3a4a5e; margin-bottom: 1.5rem; }
+  body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0b1520; color: #d8d0bc; padding: 2rem; min-height: 100vh; }
+  h1 { font-size: 20px; font-weight: 600; color: #e8d5a3; margin-bottom: 4px; letter-spacing: 0.01em; font-family: 'Inter', 'Pretendard', sans-serif; }
+  .subtitle { font-size: 12px; color: #5a6e82; margin-bottom: 1.5rem; }
   .metric-grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 1.5rem; }
   .metric { background: #111d2c; border: 0.5px solid #1a2d40; border-radius: 10px; padding: 14px 16px; }
   .metric.highlight { border-color: #8a6e32; }
-  .metric-label { font-size: 11px; color: #3a4e62; margin-bottom: 6px; letter-spacing: 0.05em; text-transform: uppercase; }
-  .metric-value { font-size: 19px; font-weight: 500; color: #c8b484; }
-  .metric-sub { font-size: 11px; color: #2a3a4e; margin-top: 4px; }
+  .metric-label { font-size: 11px; color: #6a8099; margin-bottom: 6px; letter-spacing: 0.05em; text-transform: uppercase; }
+  .metric-value { font-size: 19px; font-weight: 500; color: #c8b484; font-family: 'Inter', sans-serif; letter-spacing: -0.02em; }
+  .metric-sub { font-size: 11px; color: #4a5e72; margin-top: 4px; }
   .pos { color: #4a9e6e !important; } .neg { color: #9e4a4a !important; }
   .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1.5rem; }
   .card { background: #111d2c; border: 0.5px solid #1a2d40; border-radius: 12px; padding: 16px; }
   .card-full { background: #111d2c; border: 0.5px solid #1a2d40; border-radius: 12px; padding: 16px; }
-  .card-title { font-size: 11px; font-weight: 500; color: #3a4e62; margin-bottom: 14px; letter-spacing: 0.07em; text-transform: uppercase; }
+  .card-title { font-size: 11px; font-weight: 500; color: #6a8099; margin-bottom: 14px; letter-spacing: 0.07em; text-transform: uppercase; }
   .legend-row { display: flex; gap: 14px; margin-bottom: 10px; flex-wrap: wrap; }
-  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #3a4e62; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #6a8099; }
   .legend-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
   .tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
-  .tbl th { font-size: 10px; font-weight: 500; color: #2a3e52; text-align: left; padding: 6px 10px; border-bottom: 0.5px solid #141e2c; white-space: nowrap; letter-spacing: 0.05em; text-transform: uppercase; }
-  .tbl td { padding: 9px 10px; border-bottom: 0.5px solid #0f1820; color: #7a8a9e; white-space: nowrap; }
+  .tbl th { font-size: 10px; font-weight: 500; color: #5a7890; text-align: left; padding: 6px 10px; border-bottom: 0.5px solid #141e2c; white-space: nowrap; letter-spacing: 0.05em; text-transform: uppercase; }
+  .tbl td { padding: 9px 10px; border-bottom: 0.5px solid #0f1820; color: #9aabbd; white-space: nowrap; font-family: 'Inter', sans-serif; font-size: 12px; }
   .tbl tr:last-child td { border-bottom: none; }
   .tbl tbody tr:hover { background: #0e1828; }
-  .tbl .name { color: #c4b484; font-weight: 500; }
+  .tbl .name { color: #c4b484; font-weight: 500; font-family: 'Pretendard', sans-serif; }
   .badge { display: inline-block; font-size: 10px; font-weight: 500; padding: 2px 8px; border-radius: 20px; }
   .badge-kr { background: #1e0a12; color: #c21e56; }
   .badge-us { background: #0a0e1e; color: #4169e1; }
   .badge-hold { background: #0e2018; color: #4a9e6e; }
-  .badge-sold { background: #141820; color: #3a4a5e; }
-  .status-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 1.5rem; padding: 10px 14px; background: #0e1828; border: 0.5px solid #1a2d40; border-radius: 8px; font-size: 12px; color: #3a4e62; }
+  .badge-sold { background: #141820; color: #5a6a7e; }
+  .status-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 1.5rem; padding: 10px 14px; background: #0e1828; border: 0.5px solid #1a2d40; border-radius: 8px; font-size: 12px; color: #6a8099; }
   .status-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-  .refresh-btn { margin-left: auto; background: transparent; border: 0.5px solid #1e3050; color: #3a5070; padding: 4px 12px; border-radius: 6px; font-size: 11px; cursor: pointer; }
+  .refresh-btn { margin-left: auto; background: transparent; border: 0.5px solid #2e4060; color: #6a8099; padding: 4px 12px; border-radius: 6px; font-size: 11px; cursor: pointer; }
   .refresh-btn:hover { background: #0e1828; color: #c8b484; }
   .month-group { margin-bottom: 6px; border: 0.5px solid #1a2d40; border-radius: 10px; overflow: hidden; }
   .month-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; cursor: pointer; background: #0f1c2c; transition: background 0.15s; user-select: none; }
   .month-header:hover { background: #121f30; }
   .month-header.open { background: #131f2e; border-bottom: 0.5px solid #1a2d40; }
-  .month-label { font-size: 13px; font-weight: 500; color: #c4b484; display: flex; align-items: center; gap: 10px; }
+  .month-label { font-size: 13px; font-weight: 500; color: #c4b484; display: flex; align-items: center; gap: 10px; font-family: 'Pretendard', sans-serif; }
   .month-stats { display: flex; align-items: center; gap: 16px; }
   .month-pnl { font-size: 12px; font-weight: 500; }
-  .month-arrow { font-size: 10px; color: #2a3e52; transition: transform 0.2s; display: inline-block; }
+  .month-arrow { font-size: 10px; color: #5a7890; transition: transform 0.2s; display: inline-block; }
   .month-arrow.open { transform: rotate(180deg); }
   .month-body { display: none; }
   .month-body.open { display: block; }
@@ -60,7 +63,7 @@
 </head>
 <body>
 
-<h1>Wonny 매매일지</h1>
+<h1>WONNY Portfolio Insight</h1>
 <p class="subtitle" id="lastUpdate">데이터 불러오는 중...</p>
 
 <div class="status-bar">
@@ -184,7 +187,7 @@ function buildAccordion(rows) {
         <td>${fmtPr(avg,mkt)}</td>
         <td>${g.totalQty||'—'}</td>
         <td>${fmtA(g.totalBuyAmt)}</td>
-        <td style="color:#2a3e52;">${isHold?'—':(g.매도일||'—')}</td>
+        <td style="color:#5a7890;">${isHold?'—':(g.매도일||'—')}</td>
         <td class="${pCls}">${isHold?'—':fmtW(g.totalPnl)}</td>
         <td class="${rCls}">${ret===null?'—':fmtP(ret)}</td>
         <td><span class="badge ${isHold?'badge-hold':'badge-sold'}">${state||'—'}</span></td>
@@ -195,11 +198,11 @@ function buildAccordion(rows) {
       <div class="month-header${isFirst?' open':''}" id="hdr-${m}" onclick="toggleMonth('${m}')">
         <div class="month-label">
           <span>${label}</span>
-          <span style="font-size:11px;color:#2a3e52;font-weight:400;">${items.length}건</span>
+          <span style="font-size:11px;color:#5a7890;font-weight:400;">${items.length}건</span>
         </div>
         <div class="month-stats">
-          ${sold.length>0?`<span style="font-size:11px;color:#2a3e52;">${wins}승 ${sold.length-wins}패</span>`:''}
-          ${sold.length>0?`<span class="month-pnl ${pnlCls}">${fmtW(monthPnl)}</span>`:'<span style="font-size:11px;color:#2a3e52;">보유중</span>'}
+          ${sold.length>0?`<span style="font-size:11px;color:#5a7890;">${wins}승 ${sold.length-wins}패</span>`:''}
+          ${sold.length>0?`<span class="month-pnl ${pnlCls}">${fmtW(monthPnl)}</span>`:'<span style="font-size:11px;color:#5a7890;">보유중</span>'}
           <span class="month-arrow${isFirst?' open':''}" id="arrow-${m}">▼</span>
         </div>
       </div>
