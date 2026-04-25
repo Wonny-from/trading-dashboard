@@ -223,23 +223,45 @@ function render(rows, cashKRW, cashUSD, usdRate) {
     }
   });
 
-  // 매매 내역은 전체 (최신순)
-  document.getElementById('tbody').innerHTML = [...rows].reverse().map(r=>{
-    const mkt=r['시장']||''; const state=String(r['상태']||'');
-    const pv=nv(r['수익률(%)']); const pnlv=nv(r['손익(원)']);
-    const rCls=pv===null||isNaN(pv)?'':pv>0?'pos':pv<0?'neg':'';
-    const pCls=pnlv===null||isNaN(pnlv)?'':pnlv>0?'pos':pnlv<0?'neg':'';
+  // 매매 내역 — 같은 종목+상태 합산해서 1열로 표시
+  const tableMap = {};
+  [...rows].reverse().forEach(r => {
+    const key = r['종목'] + '|' + (r['시장']||'') + '|' + (r['상태']||'');
+    if (!tableMap[key]) {
+      tableMap[key] = {
+        종목: r['종목'], 시장: r['시장']||'', 상태: String(r['상태']||''),
+        매수일: r['매수일'], 매도일: r['매도일']||'',
+        totalBuyAmt: 0, totalPnl: 0, totalQty: 0, weightedPrice: 0,
+      };
+    }
+    const g = tableMap[key];
+    const qty = nv(r['수량'])||0;
+    const buyAmt = nv(r['매수금액(원)'])||0;
+    const buyPrice = nv(r['매수가'])||0;
+    g.totalQty += qty;
+    g.totalBuyAmt += buyAmt;
+    g.totalPnl += nv(r['손익(원)'])||0;
+    g.weightedPrice += buyPrice * qty;
+  });
+
+  document.getElementById('tbody').innerHTML = Object.values(tableMap).map(g => {
+    const mkt = g.시장; const state = g.상태;
+    const avgPrice = g.totalQty > 0 ? g.weightedPrice / g.totalQty : 0;
+    const retPct = g.totalBuyAmt > 0 && !state.includes('보유') ? g.totalPnl / g.totalBuyAmt * 100 : null;
+    const pCls = g.totalPnl >= 0 ? 'pos' : 'neg';
+    const rCls = retPct !== null && retPct >= 0 ? 'pos' : 'neg';
+    const isHolding = state.includes('보유');
     return `<tr>
-      <td style="font-weight:500;color:#111;">${r['종목']||'—'}</td>
+      <td style="font-weight:500;color:#111;">${g.종목||'—'}</td>
       <td><span class="badge ${mkt==='미장'?'badge-us':'badge-kr'}">${mkt||'—'}</span></td>
-      <td style="color:#aaa;font-size:11px;">${r['매수일']||'—'}</td>
-      <td>${fmtPr(r['매수가'],mkt)}</td>
-      <td style="color:#aaa;">${r['수량']||'—'}</td>
-      <td>${fmtA(r['매수금액(원)'])}</td>
-      <td style="color:#aaa;font-size:11px;">${r['매도일']||'—'}</td>
-      <td class="${pCls}">${pnlv!==null&&!isNaN(pnlv)?fmtW(pnlv):'—'}</td>
-      <td class="${rCls}">${pv!==null&&!isNaN(pv)?fmtP(pv):'—'}</td>
-      <td><span class="badge ${state.includes('보유')?'badge-hold':'badge-sold'}">${state||'—'}</span></td>
+      <td style="color:#aaa;font-size:11px;">${g.매수일||'—'}</td>
+      <td>${fmtPr(avgPrice, mkt)}</td>
+      <td style="color:#aaa;">${g.totalQty||'—'}</td>
+      <td>${fmtA(g.totalBuyAmt)}</td>
+      <td style="color:#aaa;font-size:11px;">${isHolding ? '—' : (g.매도일||'—')}</td>
+      <td class="${pCls}">${isHolding ? '—' : fmtW(g.totalPnl)}</td>
+      <td class="${rCls}">${retPct===null ? '—' : fmtP(retPct)}</td>
+      <td><span class="badge ${isHolding?'badge-hold':'badge-sold'}">${state||'—'}</span></td>
     </tr>`;
   }).join('');
 }
