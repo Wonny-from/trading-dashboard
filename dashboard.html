@@ -10,76 +10,131 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <style>
-  /* 1. 화이트 테마 스타일 */
+  /* Base Style: 밝고 깨끗한 배경 */
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { 
-    font-family: 'Pretendard', sans-serif; 
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; 
     background: #f8fafc; 
     color: #1e293b; 
     padding: 2rem; 
     min-height: 100vh;
     line-height: 1.5;
   }
+
+  /* Typography */
   h1 { font-size: 24px; font-weight: 700; color: #0f172a; margin-bottom: 6px; letter-spacing: -0.02em; }
   .subtitle { font-size: 14px; color: #64748b; margin-bottom: 2rem; }
+
+  /* Status Bar */
   .status-bar { 
     display: flex; align-items: center; gap: 10px; 
     margin-bottom: 1.5rem; padding: 12px 20px; 
-    background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; 
-    font-size: 13px; color: #64748b; box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    background: #fff; 
+    border: 1px solid #e2e8f0; 
+    border-radius: 12px; 
+    font-size: 13px; color: #64748b; 
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
   }
-  .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #e2e8f0; }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  
+  /* Point Color Button: #0066ff */
   .refresh-btn { 
     margin-left: auto; background: #0066ff; border: none; color: #fff; 
     padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 600; 
     cursor: pointer; transition: all 0.2s ease;
   }
+  .refresh-btn:hover { background: #0052cc; transform: translateY(-1px); }
+
+  /* Metric Cards */
   .metric-grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 2rem; }
-  .metric { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+  .metric { 
+    background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 20px; 
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); transition: transform 0.2s;
+  }
+  /* Highlight Card: 블루 포인트 적용 */
   .metric.highlight { border: 2px solid #0066ff; background: #f0f7ff; }
-  .metric-label { font-size: 11px; font-weight: 700; color: #64748b; margin-bottom: 8px; text-transform: uppercase; }
-  .metric-value { font-size: 22px; font-weight: 700; color: #0f172a; font-family: 'Inter', sans-serif; }
+  
+  .metric-label { font-size: 11px; font-weight: 700; color: #64748b; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .metric-value { font-size: 22px; font-weight: 700; color: #0f172a; font-family: 'Inter', sans-serif; letter-spacing: -0.03em; }
   .metric-sub { font-size: 12px; color: #94a3b8; margin-top: 4px; }
-  .pos { color: #16a34a !important; } .neg { color: #dc2626 !important; }
+  
+  .pos { color: #16a34a !important; } /* 수익 초록 */
+  .neg { color: #dc2626 !important; } /* 손실 빨강 */
+
+  /* Charts */
   .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 2rem; }
   .card, .card-full { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 24px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
   .card-title { font-size: 15px; font-weight: 700; color: #0f172a; margin-bottom: 20px; }
+  
+  .legend-row { display: flex; gap: 16px; margin-bottom: 15px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #64748b; font-weight: 500; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 3px; }
+
+  /* Table Style: 깔끔한 데이터 뷰 */
   .tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
-  .tbl th { font-size: 11px; color: #64748b; text-align: left; padding: 12px; border-bottom: 2px solid #f1f5f9; }
+  .tbl th { font-size: 11px; font-weight: 600; color: #64748b; text-align: left; padding: 12px; border-bottom: 2px solid #f1f5f9; text-transform: uppercase; }
   .tbl td { padding: 14px 12px; border-bottom: 1px solid #f1f5f9; color: #334155; font-family: 'Inter', sans-serif; }
+  .tbl tr:last-child td { border-bottom: none; }
+  .tbl tbody tr:hover { background: #f8fafc; }
+  .tbl .name { color: #0f172a; font-weight: 600; font-family: 'Pretendard', sans-serif; }
+
+  /* Badges */
   .badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 6px; }
-  .badge-kr { background: #eff6ff; color: #0066ff; }
+  .badge-kr { background: #eff6ff; color: #0066ff; } /* 국장 포인트 블루 */
   .badge-us { background: #f1f5f9; color: #475569; }
   .badge-hold { background: #ecfdf5; color: #059669; }
   .badge-sold { background: #f8fafc; color: #94a3b8; border: 1px solid #e2e8f0; }
+
+  /* Accordion (Monthly Group) */
   .month-group { margin-bottom: 12px; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; background: #fff; }
-  .month-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; cursor: pointer; }
-  .month-body { display: none; padding: 0 20px 20px 20px; }
+  .month-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; cursor: pointer; transition: background 0.2s; }
+  .month-header:hover { background: #f8fafc; }
+  .month-header.open { background: #f1f5f9; border-bottom: 1px solid #e2e8f0; }
+  .month-label { font-size: 15px; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 10px; }
+  .month-stats { display: flex; align-items: center; gap: 16px; }
+  .month-pnl { font-size: 14px; font-weight: 600; }
+  .month-arrow { font-size: 12px; color: #94a3b8; transition: transform 0.2s; }
+  .month-arrow.open { transform: rotate(180deg); color: #0066ff; }
+  .month-body { display: none; }
   .month-body.open { display: block; }
+
+  @media (max-width: 1024px) { .metric-grid-5 { grid-template-columns: repeat(3, 1fr); } .charts-row { grid-template-columns: 1fr; } }
+  @media (max-width: 768px) { body { padding: 1rem; } .metric-grid-5 { grid-template-columns: repeat(2, 1fr); } }
 </style>
 </head>
 <body>
 
 <h1>WONNY Portfolio Insight</h1>
-<p class="subtitle" id="lastUpdate">데이터 로드 중...</p>
+<p class="subtitle" id="lastUpdate">데이터를 불러오는 중입니다...</p>
 
 <div class="status-bar">
-  <div class="status-dot" id="sDot"></div>
+  <div class="status-dot" style="background:#e2e8f0;" id="sDot"></div>
   <span id="sTxt">구글 시트 연결 중...</span>
   <button class="refresh-btn" onclick="run()">새로고침</button>
 </div>
 
 <div class="metric-grid-5">
-  <div class="metric highlight"><div class="metric-label">총 자산</div><div class="metric-value" id="m-assets">—</div><div class="metric-sub">투자금 + 현금</div></div>
+  <div class="metric highlight"><div class="metric-label">총 자산</div><div class="metric-value" id="m-assets">—</div><div class="metric-sub" id="m-assets-sub">투자금 + 현금 합계</div></div>
   <div class="metric"><div class="metric-label">총 투자금액</div><div class="metric-value" id="m-total">—</div><div class="metric-sub" id="m-hold">보유 종목 총액</div></div>
-  <div class="metric"><div class="metric-label">보유 현금</div><div class="metric-value" id="m-cash">—</div><div class="metric-sub" id="m-cash-sub">—</div></div>
-  <div class="metric"><div class="metric-label">실현 손익</div><div class="metric-value" id="m-pnl">—</div><div class="metric-sub" id="m-pct">—</div></div>
-  <div class="metric"><div class="metric-label">승률</div><div class="metric-value" id="m-win">—</div><div class="metric-sub" id="m-winsub">—</div></div>
+  <div class="metric"><div class="metric-label">보유 현금</div><div class="metric-value" id="m-cash">—</div><div class="metric-sub" id="m-cash-sub">원화 및 달러</div></div>
+  <div class="metric"><div class="metric-label">실현 손익</div><div class="metric-value" id="m-pnl">—</div><div class="metric-sub" id="m-pct">누적 수익률</div></div>
+  <div class="metric"><div class="metric-label">승률</div><div class="metric-value" id="m-win">—</div><div class="metric-sub" id="m-winsub">익절/손절 횟수</div></div>
 </div>
 
 <div class="charts-row">
-  <div class="card"><div class="card-title">보유 종목 비중</div><div style="height:250px;"><canvas id="retChart"></canvas></div></div>
-  <div class="card"><div class="card-title">자산 구성 분포</div><div id="mktLegend" style="margin-bottom:10px; display:flex; gap:10px; font-size:12px;"></div><div style="height:250px;"><canvas id="mktChart"></canvas></div></div>
+  <div class="card">
+    <div class="card-title">보유 종목별 투자 비중</div>
+    <div class="legend-row">
+      <div class="legend-item"><div class="legend-dot" style="background:#0066ff;"></div>국장</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#cbd5e1;"></div>미장</div>
+    </div>
+    <div style="position:relative;height:250px;"><canvas id="retChart"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-title">자산 구성 분포</div>
+    <div id="mktLegend" class="legend-row"></div>
+    <div style="position:relative;height:250px;"><canvas id="mktChart"></canvas></div>
+  </div>
 </div>
 
 <div class="card-full">
@@ -88,108 +143,263 @@
 </div>
 
 <script>
+// 기존 구글 시트 주소 유지
 const TRADE_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRgDk4qNXL-ByfHEPG7pwnK8Zz96-IPU5GlC0D_kFipnAkKiBtSIvyQsnZWZ0uofAA51iqxOCsZ2-_W/pub?gid=512959016&single=true&output=csv';
 const CASH_CSV  = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRgDk4qNXL-ByfHEPG7pwnK8Zz96-IPU5GlC0D_kFipnAkKiBtSIvyQsnZWZ0uofAA51iqxOCsZ2-_W/pub?gid=2018962040&single=true&output=csv';
 
-const fmtA = v => isNaN(v) ? '—' : Math.round(v).toLocaleString() + '원';
-const fmtW = v => (v >= 0 ? '+' : '') + Math.round(v).toLocaleString() + '원';
-const fmtP = v => (v >= 0 ? '+' : '') + v.toFixed(2) + '%';
-// 2. 평단가: 국장만 소수점 제거 로직 적용
-const fmtPr = (v, mkt) => {
-  if (isNaN(v) || v === 0) return '—';
-  return mkt === '미장' ? '$' + v.toFixed(2) : Math.round(v).toLocaleString() + '원';
-};
-const nv = v => v ? Number(String(v).replace(/,/g, '')) : 0;
+const fmtA  = v => { const x=Number(v); return (isNaN(x)||v===''||v===null)?'—':Math.round(x).toLocaleString('ko-KR')+'원'; };
+const fmtW  = v => { const x=Number(v); return (isNaN(x)||v===''||v===null)?'—':(x>=0?'+':'')+Math.round(x).toLocaleString('ko-KR')+'원'; };
+const fmtP  = v => { const x=Number(v); return (isNaN(x)||v===''||v===null)?'—':(x>=0?'+':'')+x.toFixed(2)+'%'; };
+const fmtPr = (v,mkt) => { const x=Number(v); return (!v||isNaN(x))?'—':mkt==='미장'?'$'+x.toFixed(2):x.toLocaleString('ko-KR')+'원'; };
+const nv    = v => (v===null||v===undefined||v==='')?null:Number(String(v).replace(/,/g,''));
 
 let rChart, mChart;
 
 function parseCsv(url) {
   return new Promise((resolve, reject) => {
-    Papa.parse(url + '&t=' + Date.now(), { download: true, header: true, complete: r => resolve(r.data), error: e => reject(e) });
+    Papa.parse(url+'&t='+Date.now(), {
+      download: true, header: true, skipEmptyLines: true,
+      complete: r => resolve(r.data),
+      error: e => reject(e)
+    });
   });
 }
 
-function render(rows, cashKRW, cashUSD, usdRate) {
-  const holding = rows.filter(r => String(r['상태']).includes('보유'));
-  const sold = rows.filter(r => String(r['상태']).includes('매도'));
+function toggleMonth(id) {
+  const body  = document.getElementById('body-'+id);
+  const arrow = document.getElementById('arrow-'+id);
+  const hdr   = document.getElementById('hdr-'+id);
+  body.classList.toggle('open');
+  arrow.classList.toggle('open');
+  hdr.classList.toggle('open');
+}
 
-  // 메트릭 계산
-  const totalInvest = holding.reduce((s, r) => s + nv(r['매수금액(원)']), 0);
-  const totalPnl = sold.reduce((s, r) => s + nv(r['손익(원)']), 0);
-  const totalBuyAmt = sold.reduce((s, r) => s + nv(r['매수금액(원)']), 0);
-  const cashUSDinKRW = cashUSD * usdRate;
-  const totalCash = cashKRW + cashUSDinKRW;
-  const totalAssets = totalInvest + totalCash;
-  const winCount = sold.filter(r => nv(r['손익(원)']) > 0).length;
-
-  // 화면 업데이트
-  document.getElementById('m-assets').textContent = fmtA(totalAssets);
-  document.getElementById('m-total').textContent = fmtA(totalInvest);
-  document.getElementById('m-cash').textContent = fmtA(totalCash);
-  document.getElementById('m-cash-sub').textContent = `₩${Math.round(cashKRW).toLocaleString()} / $${cashUSD}`;
-  document.getElementById('m-pnl').textContent = fmtW(totalPnl);
-  document.getElementById('m-pnl').className = 'metric-value ' + (totalPnl >= 0 ? 'pos' : 'neg');
-  document.getElementById('m-pct').textContent = totalBuyAmt ? fmtP(totalPnl / totalBuyAmt * 100) : '0%';
-  document.getElementById('m-win').textContent = sold.length ? (winCount / sold.length * 100).toFixed(1) + '%' : '—';
-  document.getElementById('m-winsub').textContent = `${winCount}승 ${sold.length - winCount}패`;
-
-  // 종목별 차트
-  const hMap = {};
-  holding.forEach(r => { hMap[r['종목']] = (hMap[r['종목']] || 0) + nv(r['매수금액(원)']); });
-  const sorted = Object.entries(hMap).sort((a, b) => b[1] - a[1]);
-
-  if (rChart) rChart.destroy();
-  rChart = new Chart(document.getElementById('retChart'), {
-    type: 'bar',
-    data: { labels: sorted.map(x => x[0]), datasets: [{ data: sorted.map(x => x[1]), backgroundColor: '#0066ff', borderRadius: 5 }] },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+function buildAccordion(rows) {
+  const tableMap = {};
+  [...rows].reverse().forEach(r => {
+    const mon = (r['매수일']||'').slice(0,7);
+    const key = r['종목']+'|'+(r['시장']||'')+'|'+(r['상태']||'')+'|'+mon;
+    if (!tableMap[key]) {
+      tableMap[key] = {
+        종목: r['종목'], 시장: r['시장']||'', 상태: String(r['상태']||''),
+        매수일: r['매수일']||'', 매도일: r['매도일']||'', 월: mon,
+        totalBuyAmt: 0, totalPnl: 0, totalQty: 0, weightedPrice: 0,
+      };
+    }
+    const g = tableMap[key];
+    const qty = nv(r['수량'])||0;
+    g.totalQty += qty;
+    g.totalBuyAmt += nv(r['매수금액(원)'])||0;
+    g.totalPnl += nv(r['손익(원)'])||0;
+    g.weightedPrice += (nv(r['매수가'])||0) * qty;
+    if (!g.매도일 && r['매도일']) g.매도일 = r['매도일'];
   });
 
-  // 자산 구성 차트
-  if (mChart) mChart.destroy();
-  mChart = new Chart(document.getElementById('mktChart'), {
-    type: 'doughnut',
-    data: { labels: ['국장','미장','원화현금','달러현금'], datasets: [{ data: [holding.filter(r=>r['시장']==='국장').reduce((s,r)=>s+nv(r['매수금액(원)']),0), holding.filter(r=>r['시장']==='미장').reduce((s,r)=>s+nv(r['매수금액(원)']),0), cashKRW, cashUSDinKRW], backgroundColor: ['#0066ff','#94a3b8','#16a34a','#f59e0b'] }] },
-    options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { display: false } } }
+  const monthMap = {};
+  Object.values(tableMap).forEach(g => {
+    const m = g.월||'기타';
+    if (!monthMap[m]) monthMap[m] = [];
+    monthMap[m].push(g);
   });
 
-  // 상세 내역 아코디언 빌드
-  const months = [...new Set(rows.map(r => String(r['매수일']).slice(0, 7)))].sort().reverse();
-  document.getElementById('accordion').innerHTML = months.map(m => {
-    const mRows = rows.filter(r => String(r['매수일']).startsWith(m));
-    const tBody = mRows.map(r => `
-      <tr>
-        <td class="name">${r['종목']}</td>
-        <td><span class="badge ${r['시장']==='미장'?'badge-us':'badge-kr'}">${r['시장']}</span></td>
-        <td>${r['매수일']}</td>
-        <td>${fmtPr(nv(r['매수가']), r['시장'])}</td>
-        <td>${r['수량']}</td>
-        <td>${fmtA(nv(r['매수금액(원)']))}</td>
-        <td class="${nv(r['손익(원)'])>=0?'pos':'neg'}">${r['상태'].includes('보유')?'—':fmtW(nv(r['손익(원)']))}</td>
-        <td><span class="badge ${r['상태'].includes('보유')?'badge-hold':'badge-sold'}">${r['상태']}</span></td>
-      </tr>`).join('');
+  const months = Object.keys(monthMap).sort().reverse();
+  const MO = ['','1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+
+  const html = months.map((m, idx) => {
+    const items = monthMap[m];
+    const sold  = items.filter(g => !g.상태.includes('보유'));
+    const monthPnl = sold.reduce((s,g) => s+g.totalPnl, 0);
+    const wins  = sold.filter(g => g.totalPnl > 0).length;
+    const [y, mo] = m.split('-');
+    const label = mo ? `${y}년 ${MO[parseInt(mo)]}` : m;
+    const pnlCls = monthPnl >= 0 ? 'pos' : 'neg';
+    const isFirst = idx === 0;
+
+    const trows = items.map(g => {
+      const mkt = g.시장; const state = g.상태;
+      const avg = g.totalQty > 0 ? g.weightedPrice / g.totalQty : 0;
+      const ret = g.totalBuyAmt > 0 && !state.includes('보유') ? g.totalPnl/g.totalBuyAmt*100 : null;
+      const pCls = g.totalPnl >= 0 ? 'pos' : 'neg';
+      const rCls = ret !== null && ret >= 0 ? 'pos' : 'neg';
+      const isHold = state.includes('보유');
+      return `<tr>
+        <td class="name">${g.종목||'—'}</td>
+        <td><span class="badge ${mkt==='미장'?'badge-us':'badge-kr'}">${mkt==='미장'?'🇺🇸 미장':'🇰🇷 국장'}</span></td>
+        <td>${g.매수일||'—'}</td>
+        <td>${fmtPr(avg,mkt)}</td>
+        <td>${g.totalQty||'—'}</td>
+        <td>${fmtA(g.totalBuyAmt)}</td>
+        <td style="color:#94a3b8;">${isHold?'—':(g.매도일||'—')}</td>
+        <td class="${pCls}">${isHold?'—':fmtW(g.totalPnl)}</td>
+        <td class="${rCls}">${ret===null?'—':fmtP(ret)}</td>
+        <td><span class="badge ${isHold?'badge-hold':'badge-sold'}">${state||'—'}</span></td>
+      </tr>`;
+    }).join('');
+
     return `<div class="month-group">
-      <div class="month-header" onclick="this.nextElementSibling.classList.toggle('open')"><strong>${m}</strong> <span>▼</span></div>
-      <div class="month-body"><table class="tbl"><thead><tr><th>종목</th><th>시장</th><th>매수일</th><th>평단가</th><th>수량</th><th>매수금액</th><th>손익</th><th>상태</th></tr></thead><tbody>${tBody}</tbody></table></div>
+      <div class="month-header${isFirst?' open':''}" id="hdr-${m}" onclick="toggleMonth('${m}')">
+        <div class="month-label">
+          <span>${label}</span>
+          <span style="font-size:12px;color:#94a3b8;font-weight:400;">${items.length}건</span>
+        </div>
+        <div class="month-stats">
+          ${sold.length>0?`<span style="font-size:12px;color:#64748b;font-weight:500;">${wins}승 ${sold.length-wins}패</span>`:''}
+          ${sold.length>0?`<span class="month-pnl ${pnlCls}">${fmtW(monthPnl)}</span>`:'<span style="font-size:12px;color:#94a3b8;">운용 중</span>'}
+          <span class="month-arrow${isFirst?' open':''}" id="arrow-${m}">▼</span>
+        </div>
+      </div>
+      <div class="month-body${isFirst?' open':''}" id="body-${m}">
+        <div style="overflow-x:auto;">
+          <table class="tbl">
+            <thead><tr>
+              <th>종목</th><th>시장</th><th>매수일</th><th>평단가</th><th>수량</th>
+              <th>매수금액</th><th>매도일</th><th>손익</th><th>수익률</th><th>상태</th>
+            </tr></thead>
+            <tbody>${trows}</tbody>
+          </table>
+        </div>
+      </div>
     </div>`;
   }).join('');
+
+  document.getElementById('accordion').innerHTML = html;
+}
+
+function render(rows, cashKRW, cashUSD, usdRate) {
+  document.getElementById('sDot').style.background = '#16a34a';
+  document.getElementById('sTxt').textContent = `연동 완료 · 매매 ${rows.length}건 · 환율 ${Math.round(usdRate).toLocaleString()}원 · ${new Date().toLocaleTimeString('ko-KR')}`;
+  document.getElementById('lastUpdate').textContent = `최근 업데이트: ${new Date().toLocaleString('ko-KR')}`;
+
+  const holding = rows.filter(r => String(r['상태']||'').includes('보유'));
+  const sold    = rows.filter(r => String(r['상태']||'').includes('매도'));
+
+  const soldByName = {};
+  sold.forEach(r => {
+    const n = r['종목'];
+    if (!soldByName[n]) soldByName[n] = { pnl:0, buyAmt:0 };
+    soldByName[n].pnl    += nv(r['손익(원)'])||0;
+    soldByName[n].buyAmt += nv(r['매수금액(원)'])||0;
+  });
+  const sg = Object.values(soldByName);
+  const totalPnl = sg.reduce((s,r)=>s+r.pnl,0);
+  const winners  = sg.filter(r=>r.pnl>0);
+  const losers   = sg.filter(r=>r.pnl<0);
+  const pct      = sg.length>0 ? totalPnl/sg.reduce((s,r)=>s+r.buyAmt,0)*100 : 0;
+
+  const hbn = {};
+  holding.forEach(r => {
+    const n=r['종목'];
+    if (!hbn[n]) hbn[n]={market:r['시장'],amt:0};
+    hbn[n].amt += nv(r['매수금액(원)'])||0;
+  });
+  const hg = Object.values(hbn);
+  const totalInvest = hg.reduce((s,r)=>s+r.amt,0);
+  const kr = hg.filter(r=>r.market==='국장').length;
+  const us = hg.filter(r=>r.market==='미장').length;
+
+  const cashUSDinKRW = cashUSD * usdRate;
+  const totalCash   = cashKRW + cashUSDinKRW;
+  const totalAssets = totalInvest + totalCash;
+
+  document.getElementById('m-assets').textContent = fmtA(totalAssets);
+  document.getElementById('m-total').textContent = fmtA(totalInvest);
+  document.getElementById('m-hold').textContent = `국장 ${kr} / 미장 ${us} 종목 보유`;
+  document.getElementById('m-cash').textContent = fmtA(totalCash);
+  document.getElementById('m-cash-sub').textContent = `₩${Math.round(cashKRW).toLocaleString()} / $${cashUSD.toLocaleString()}`;
+  const pEl = document.getElementById('m-pnl');
+  pEl.textContent = fmtW(totalPnl);
+  pEl.className = 'metric-value '+(totalPnl>=0?'pos':'neg');
+  document.getElementById('m-pct').textContent = fmtP(pct)+' 전체 누적';
+  document.getElementById('m-win').textContent = sg.length>0?(winners.length/sg.length*100).toFixed(1)+'%':'—';
+  document.getElementById('m-winsub').textContent = `${winners.length}승 ${losers.length}패`;
+
+  const hm = {};
+  holding.forEach(r => {
+    const key=r['종목']+'|'+(r['시장']||'');
+    if (!hm[key]) hm[key]={종목:r['종목'],시장:r['시장']||'',amount:0};
+    hm[key].amount += nv(r['매수금액(원)'])||0;
+  });
+  const sorted = Object.values(hm).sort((a,b)=>b.amount-a.amount);
+  
+  if (rChart) rChart.destroy();
+  if (sorted.length===0) {
+    document.getElementById('retChart').parentElement.innerHTML='<p style="text-align:center;color:#94a3b8;padding:4rem 0;font-size:13px;">현재 보유 중인 종목이 없습니다.</p>';
+  } else {
+    rChart = new Chart(document.getElementById('retChart'),{
+      type:'bar',
+      data:{
+        labels:sorted.map(r=>r['종목']||''),
+        datasets:[{
+          data:sorted.map(r=>r.amount),
+          backgroundColor:sorted.map(r=>r['시장']==='미장'?'#cbd5e1':'#0066ff'),
+          borderRadius:6,
+          barThickness: 24
+        }]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{backgroundColor:'#1e293b',padding:12,callbacks:{label:ctx=>` ${Math.round(ctx.raw).toLocaleString()}원`}}},
+        scales:{
+          x:{ticks:{font:{size:11},color:'#64748b'},grid:{display:false},border:{display:false}},
+          y:{ticks:{font:{size:11, family:'Inter'},color:'#94a3b8',callback:v=>(v/10000).toFixed(0)+'만'},grid:{color:'#f1f5f9'},border:{display:false}}
+        }
+      }
+    });
+  }
+
+  const krAmt=holding.filter(r=>r['시장']==='국장').reduce((s,r)=>s+(nv(r['매수금액(원)'])||0),0);
+  const usAmt=holding.filter(r=>r['시장']==='미장').reduce((s,r)=>s+(nv(r['매수금액(원)'])||0),0);
+  
+  const assetsData = [
+    {label:'국장 주식', amt:krAmt, color:'#0066ff'},
+    {label:'미장 주식', amt:usAmt, color:'#94a3b8'},
+    {label:'원화 현금', amt:cashKRW, color:'#16a34a'},
+    {label:'달러 현금', amt:cashUSDinKRW, color:'#f59e0b'}
+  ];
+
+  document.getElementById('mktLegend').innerHTML = assetsData.map(d=>`
+    <div class="legend-item">
+      <div class="legend-dot" style="background:${d.color};"></div>
+      ${d.label} ${totalAssets>0?(d.amt/totalAssets*100).toFixed(1):0}%
+    </div>`).join('');
+
+  if (mChart) mChart.destroy();
+  mChart = new Chart(document.getElementById('mktChart'),{
+    type:'doughnut',
+    data:{
+      labels:assetsData.map(d=>d.label),
+      datasets:[{
+        data:assetsData.map(d=>d.amt),
+        backgroundColor:assetsData.map(d=>d.color),
+        borderWidth:4,
+        borderColor:'#ffffff'
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,cutout:'75%',
+      plugins:{legend:{display:false},tooltip:{backgroundColor:'#1e293b',padding:12,callbacks:{label:ctx=>` ${ctx.label}: ${Math.round(ctx.raw).toLocaleString()}원`}}}
+    }
+  });
+
+  buildAccordion(rows);
 }
 
 async function run() {
   document.getElementById('sDot').style.background = '#f59e0b';
+  document.getElementById('sTxt').textContent = '데이터 업데이트 중...';
   try {
-    const [trades, cash] = await Promise.all([parseCsv(TRADE_CSV), parseCsv(CASH_CSV)]);
-    const cashKRW = nv(cash.find(r => r['구분'] === '원화')?.['금액']);
-    const cashUSD = nv(cash.find(r => r['구분'] === '달러')?.['금액']);
-    const usdRate = nv(cash.find(r => r['구분'] === '환율')?.['금액']) || 1400;
-    render(trades, cashKRW, cashUSD, usdRate);
-    document.getElementById('sDot').style.background = '#16a34a';
-    document.getElementById('sTxt').textContent = '연동 완료';
-    document.getElementById('lastUpdate').textContent = '최근 업데이트: ' + new Date().toLocaleString();
-  } catch (e) {
-    document.getElementById('sTxt').textContent = '연결 오류';
+    const [tradeRows, cashRows] = await Promise.all([parseCsv(TRADE_CSV), parseCsv(CASH_CSV)]);
+    const cleanNum = v => Number(String(v||0).replace(/,/g,''));
+    const cashKRW = cleanNum(cashRows.find(r=>r['구분']==='원화')?.['금액']);
+    const cashUSD = cleanNum(cashRows.find(r=>r['구분']==='달러')?.['금액']);
+    const usdRate = cleanNum(cashRows.find(r=>r['구분']==='환율')?.['금액'])||1480;
+    render(tradeRows, cashKRW, cashUSD, usdRate);
+  } catch(e) {
+    document.getElementById('sDot').style.background = '#dc2626';
+    document.getElementById('sTxt').textContent = '연결 오류: '+e.message;
   }
 }
+
 run();
 </script>
 </body>
