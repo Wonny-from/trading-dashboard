@@ -35,8 +35,8 @@
   .tbl tbody tr:hover { background: #0e1828; }
   .tbl .name { color: #c4b484; font-weight: 500; font-family: 'Pretendard', sans-serif; }
   .badge { display: inline-block; font-size: 10px; font-weight: 500; padding: 2px 8px; border-radius: 20px; }
-  .badge-kr { background: #1e0a12; color: #c21e56; }
-  .badge-us { background: #0a0e1e; color: #4169e1; }
+  .badge-kr { background: #1a0e16; color: #a83258; }
+  .badge-us { background: #0e1220; color: #4a6eb8; }
   .badge-hold { background: #0e2018; color: #4a9e6e; }
   .badge-sold { background: #141820; color: #5a6a7e; }
   .status-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 1.5rem; padding: 10px 14px; background: #0e1828; border: 0.5px solid #1a2d40; border-radius: 8px; font-size: 12px; color: #6a8099; }
@@ -84,8 +84,8 @@
   <div class="card">
     <div class="card-title">보유 종목별 투자금액</div>
     <div class="legend-row">
-      <div class="legend-item"><div class="legend-dot" style="background:#c21e56;"></div>국장</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#4169e1;"></div>미장</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#a83258;"></div>국장</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#4a6eb8;"></div>미장</div>
     </div>
     <div style="position:relative;height:220px;"><canvas id="retChart"></canvas></div>
   </div>
@@ -285,7 +285,7 @@ function render(rows, cashKRW, cashUSD, usdRate) {
   } else {
     rChart = new Chart(document.getElementById('retChart'),{
       type:'bar',
-      data:{labels:sorted.map(r=>r['종목']||''),datasets:[{data:sorted.map(r=>r.amount),backgroundColor:sorted.map(r=>r['시장']==='미장'?'#4169e1':'#c21e56'),borderRadius:4,borderSkipped:false}]},
+      data:{labels:sorted.map(r=>r['종목']||''),datasets:[{data:sorted.map(r=>r.amount),backgroundColor:sorted.map(r=>r['시장']==='미장'?'#4a6eb8':'#a83258'),borderRadius:4,borderSkipped:false}]},
       options:{responsive:true,maintainAspectRatio:false,
         plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${Math.round(ctx.raw).toLocaleString()}원`}}},
         scales:{
@@ -299,13 +299,13 @@ function render(rows, cashKRW, cashUSD, usdRate) {
   const krAmt=holding.filter(r=>r['시장']==='국장').reduce((s,r)=>s+(nv(r['매수금액(원)'])||0),0);
   const usAmt=holding.filter(r=>r['시장']==='미장').reduce((s,r)=>s+(nv(r['매수금액(원)'])||0),0);
   document.getElementById('mktLegend').innerHTML=[
-    ['국장 주식',krAmt,'#c21e56'],['미장 주식',usAmt,'#4169e1'],
-    ['원화 현금',cashKRW,'#7cc8cb'],['달러 현금',cashUSDinKRW,'#de541e'],
+    ['국장 주식',krAmt,'#a83258'],['미장 주식',usAmt,'#4a6eb8'],
+    ['원화 현금',cashKRW,'#5aa8aa'],['달러 현금',cashUSDinKRW,'#c4622e'],
   ].map(([l,a,c])=>`<div class="legend-item"><div class="legend-dot" style="background:${c};"></div>${l} ${totalAssets>0?(a/totalAssets*100).toFixed(1):0}%</div>`).join('');
   if (mChart) mChart.destroy();
   mChart = new Chart(document.getElementById('mktChart'),{
     type:'doughnut',
-    data:{labels:['국장 주식','미장 주식','원화 현금','달러 현금'],datasets:[{data:[krAmt,usAmt,cashKRW,cashUSDinKRW],backgroundColor:['#c21e56','#4169e1','#7cc8cb','#de541e'],borderWidth:0,hoverOffset:4}]},
+    data:{labels:['국장 주식','미장 주식','원화 현금','달러 현금'],datasets:[{data:[krAmt,usAmt,cashKRW,cashUSDinKRW],backgroundColor:['#a83258','#4a6eb8','#5aa8aa','#c4622e'],borderWidth:0,hoverOffset:4}]},
     options:{responsive:true,maintainAspectRatio:false,cutout:'65%',
       plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${Math.round(ctx.raw).toLocaleString()}원`}}}
     }
