@@ -149,7 +149,7 @@ const CASH_CSV  = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRgDk4qNXL-By
 const fmtA  = v => { const x=Number(v); return (isNaN(x)||v===''||v===null)?'—':Math.round(x).toLocaleString('ko-KR')+'원'; };
 const fmtW  = v => { const x=Number(v); return (isNaN(x)||v===''||v===null)?'—':(x>=0?'+':'')+Math.round(x).toLocaleString('ko-KR')+'원'; };
 const fmtP  = v => { const x=Number(v); return (isNaN(x)||v===''||v===null)?'—':(x>=0?'+':'')+x.toFixed(2)+'%'; };
-const fmtPr = (v,mkt) => { const x=Number(v); return (!v||isNaN(x))?'—':mkt==='미장'?'$'+x.toFixed(2):x.toLocaleString('ko-KR')+'원'; };
+const fmtPr = (v,mkt) => { const x=Number(v); return (!v||isNaN(x))?'—':mkt==='미장'?'$'+x.toFixed(2):Math.round(x).toLocaleString('ko-KR')+'원'; };
 const nv    = v => (v===null||v===undefined||v==='')?null:Number(String(v).replace(/,/g,''));
 
 let rChart, mChart;
