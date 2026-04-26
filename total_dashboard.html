@@ -843,10 +843,22 @@ function render(etfRows, depRows, tradeRows, cashRows, historyRows) {
   // ── 월별 자산 그래프 ──
   let histLabels = [], histVals = [];
   if(historyRows && historyRows.length>0) {
-    const sorted = historyRows.filter(r=>r['월']&&r['총자산']).sort((a,b)=>a['월']>b['월']?1:-1);
-    histLabels = sorted.map(r=>r['월']);
+    const sorted = historyRows.filter(r=>{
+      const mon = r['월']||'';
+      const val = r['총자산(자동)']||r['총자산']||'';
+      return mon.trim()!=='' && val.toString().trim()!=='';
+    }).sort((a,b)=>{
+      const ma = String(a['월']).trim();
+      const mb = String(b['월']).trim();
+      return ma>mb?1:-1;
+    });
+    histLabels = sorted.map(r=>String(r['월']).trim());
     histVals   = sorted.map(r=>cleanNum(r['총자산(자동)']||r['총자산']||0));
-    document.getElementById('chartSub').textContent = `${histLabels[0]} ~ ${histLabels[histLabels.length-1]} · ${histLabels.length}개월`;
+    if(histLabels.length>0) {
+      document.getElementById('chartSub').textContent = histLabels.length===1
+        ? `${histLabels[0]} 기준 · 매월 말 데이터 추가 시 그래프가 쌓입니다`
+        : `${histLabels[0]} ~ ${histLabels[histLabels.length-1]} · ${histLabels.length}개월`;
+    }
   } else {
     // 히스토리 없으면 현재 데이터 1포인트만
     const now = new Date();
@@ -870,8 +882,8 @@ function render(etfRows, depRows, tradeRows, cashRows, historyRows) {
         borderColor:'#7c5ce4',
         borderWidth:2.5,
         pointBackgroundColor:'#7c5ce4',
-        pointRadius:4,
-        pointHoverRadius:7,
+        pointRadius: histVals.length===1 ? 8 : 4,
+        pointHoverRadius: histVals.length===1 ? 10 : 7,
         fill:true,
         backgroundColor:gradient,
         tension:0.45,
