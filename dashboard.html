@@ -125,8 +125,8 @@
   <div class="card">
     <div class="card-title">보유 종목별 투자금액</div>
     <div class="legend-row">
-      <div class="legend-item"><div class="legend-dot" style="background:#a83258;"></div>국장</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#0066ff;"></div>미장</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#0066ff;"></div>국장</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#94a3b8;"></div>미장</div>
     </div>
     <div style="position:relative;height:220px;"><canvas id="retChart"></canvas></div>
   </div>
@@ -329,7 +329,7 @@ function render(rows, cashKRW, cashUSD, usdRate) {
   } else {
     rChart = new Chart(document.getElementById('retChart'),{
       type:'bar',
-      data:{labels:sorted.map(r=>r['종목']||''),datasets:[{data:sorted.map(r=>r.amount),backgroundColor:sorted.map(r=>r['시장']==='미장'?'#0066ff':'#a83258'),borderRadius:6,borderSkipped:false}]},
+      data:{labels:sorted.map(r=>r['종목']||''),datasets:[{data:sorted.map(r=>r.amount),backgroundColor:sorted.map(r=>r['시장']==='미장'?'rgba(148,163,184,0.85)':'rgba(0,102,255,0.85)'),borderRadius:6,borderSkipped:false}]},
       options:{responsive:true,maintainAspectRatio:false,
         plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${Math.round(ctx.raw).toLocaleString()}원`}}},
         scales:{
@@ -343,7 +343,7 @@ function render(rows, cashKRW, cashUSD, usdRate) {
   // 도넛 차트
   const krAmt=holding.filter(r=>r['시장']==='국장').reduce((s,r)=>s+(nv(r['매수금액(원)'])||0),0);
   const usAmt=holding.filter(r=>r['시장']==='미장').reduce((s,r)=>s+(nv(r['매수금액(원)'])||0),0);
-  const COLORS = ['#a83258','#0066ff','#0ea5e9','#f59e0b'];
+  const COLORS = ['#0066ff','#94a3b8','#22c55e','#f59e0b'];
   document.getElementById('mktLegend').innerHTML=[
     ['국장 주식',krAmt,COLORS[0]],
     ['미장 주식',usAmt,COLORS[1]],
