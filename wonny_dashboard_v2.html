@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WONNY · 통합 자산</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Nunito+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f5f6fa;
+  --white: #ffffff;
+  --border: #e8ecf4;
+  --text: #1a1f36;
+  --muted: #8892b0;
+  --muted2: #c4cad8;
+
+  --pink: #ff4d8d;
+  --pink2: #ff6fa3;
+  --purple: #7c5ce4;
+  --purple2: #9b7ef0;
+  --blue: #4f8eff;
+  --blue2: #74a9ff;
+  --cyan: #00c6e0;
+  --orange: #ff8c42;
+  --green: #00c897;
+  --red: #ff5b5b;
+  --amber: #ffb830;
+
+  --grad-pink: linear-gradient(135deg, #ff4d8d 0%, #ff8c42 100%);
+  --grad-purple: linear-gradient(135deg, #7c5ce4 0%, #b983ff 100%);
+  --grad-blue: linear-gradient(135deg, #4f8eff 0%, #00c6e0 100%);
+  --grad-green: linear-gradient(135deg, #00c897 0%, #00e5b3 100%);
+
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 20px rgba(0,0,0,0.08);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.1);
+  --shadow-color: 0 8px 24px rgba(124,92,228,0.18);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Nunito Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+/* ── 레이아웃 ── */
+.layout { display: flex; min-height: 100vh; }
+
+/* ── 사이드바 ── */
+.sidebar {
+  width: 220px;
+  background: var(--white);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  flex-shrink: 0;
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  z-index: 100;
+  box-shadow: var(--shadow-sm);
+}
+.sidebar-logo {
+  padding: 24px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.logo-icon {
+  width: 36px; height: 36px;
+  background: var(--grad-pink);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; color: white;
+  box-shadow: 0 4px 12px rgba(255,77,141,0.4);
+}
+.logo-text {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 800;
+  font-size: 18px;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+.sidebar-nav { padding: 16px 12px; flex: 1; }
+.nav-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--muted2);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0 8px;
+  margin-bottom: 8px;
+  margin-top: 16px;
+}
+.nav-label:first-child { margin-top: 0; }
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-bottom: 2px;
+  text-decoration: none;
+}
+.nav-item:hover { background: var(--bg); color: var(--text); }
+.nav-item.active {
+  background: linear-gradient(135deg, rgba(255,77,141,0.1), rgba(124,92,228,0.1));
+  color: var(--pink);
+  border-left: 3px solid var(--pink);
+  padding-left: 9px;
+}
+.nav-icon { font-size: 16px; width: 20px; text-align: center; }
+.sidebar-footer {
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--muted2);
+  text-align: center;
+}
+
+/* ── 메인 콘텐츠 ── */
+.main { margin-left: 220px; flex: 1; }
+
+/* ── 탑바 ── */
+.topbar {
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+  padding: 0 28px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  box-shadow: var(--shadow-sm);
+}
+.topbar-left h2 {
+  font-family: 'Nunito', sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text);
+}
+.topbar-left p { font-size: 12px; color: var(--muted); margin-top: 1px; }
+.topbar-right { display: flex; align-items: center; gap: 12px; }
+.status-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 600;
+}
+.status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+.refresh-btn {
+  background: var(--grad-pink);
+  border: none;
+  color: white;
+  padding: 9px 20px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: 'Nunito', sans-serif;
+  box-shadow: 0 4px 12px rgba(255,77,141,0.35);
+  transition: opacity 0.15s, transform 0.15s;
+}
+.refresh-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+.refresh-btn:active { transform: translateY(0); }
+
+/* ── 콘텐츠 영역 ── */
+.content { padding: 24px 28px; }
+
+/* ── 총 자산 히어로 + 그래프 ── */
+.hero-grid {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+.hero-card {
+  background: var(--grad-purple);
+  border-radius: 20px;
+  padding: 28px 24px;
+  color: white;
+  box-shadow: var(--shadow-color);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 220px;
+  position: relative;
+  overflow: hidden;
+}
+.hero-card::before {
+  content: '';
+  position: absolute;
+  top: -40px; right: -40px;
+  width: 160px; height: 160px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 50%;
+}
+.hero-card::after {
+  content: '';
+  position: absolute;
+  bottom: -60px; left: -30px;
+  width: 200px; height: 200px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 50%;
+}
+.hero-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.8;
+  margin-bottom: 8px;
+}
+.hero-val {
+  font-family: 'Nunito', sans-serif;
+  font-size: 32px;
+  font-weight: 800;
+  line-height: 1.1;
+  position: relative;
+  z-index: 1;
+}
+.hero-sub { font-size: 12px; opacity: 0.7; margin-top: 6px; position: relative; z-index: 1; }
+.hero-badges {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  position: relative;
+  z-index: 1;
+}
+.hero-badge {
+  background: rgba(255,255,255,0.2);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  backdrop-filter: blur(4px);
+}
+
+.chart-card {
+  background: var(--white);
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: var(--shadow-md);
+}
+.chart-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.chart-title {
+  font-family: 'Nunito', sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text);
+}
+.chart-sub { font-size: 11px; color: var(--muted); margin-top: 3px; }
+.chart-wrap { position: relative; height: 150px; }
+
+/* ── KPI 카드 ── */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.kpi {
+  background: var(--white);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.kpi:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.kpi-icon {
+  width: 48px; height: 48px;
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+.kpi-icon.pink { background: linear-gradient(135deg, rgba(255,77,141,0.15), rgba(255,140,66,0.15)); }
+.kpi-icon.purple { background: linear-gradient(135deg, rgba(124,92,228,0.15), rgba(185,131,255,0.15)); }
+.kpi-icon.blue { background: linear-gradient(135deg, rgba(79,142,255,0.15), rgba(0,198,224,0.15)); }
+.kpi-icon.green { background: linear-gradient(135deg, rgba(0,200,151,0.15), rgba(0,229,179,0.15)); }
+.kpi-info { flex: 1; min-width: 0; }
+.kpi-label { font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 4px; }
+.kpi-val { font-family: 'Nunito', sans-serif; font-size: 20px; font-weight: 800; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kpi-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.pos { color: var(--green) !important; }
+.neg { color: var(--red) !important; }
+
+/* ── 메인 그리드 ── */
+.main-grid {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+.card {
+  background: var(--white);
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
+}
+.card-title {
+  font-family: 'Nunito', sans-serif;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.card-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(255,77,141,0.1), rgba(124,92,228,0.1));
+  color: var(--purple);
+}
+
+/* ── ETF 테이블 ── */
+.etf-table { width: 100%; border-collapse: collapse; }
+.etf-table th {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--muted);
+  text-align: left;
+  padding: 0 10px 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-bottom: 2px solid var(--border);
+}
+.etf-table th:not(:first-child) { text-align: right; }
+.etf-table td {
+  padding: 13px 10px;
+  font-size: 13px;
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
+  font-weight: 500;
+}
+.etf-table tbody tr:last-child td { border-bottom: none; }
+.etf-table tbody tr:hover td { background: rgba(124,92,228,0.03); }
+.etf-table td:not(:first-child) { text-align: right; }
+.etf-name-cell { display: flex; align-items: center; gap: 10px; }
+.etf-color-bar { width: 4px; height: 36px; border-radius: 4px; flex-shrink: 0; }
+.etf-name-text { font-weight: 700; font-size: 13px; color: var(--text); }
+.etf-code { font-size: 10px; color: var(--muted); margin-top: 2px; font-weight: 500; }
+.pnl-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+.pnl-pos { background: rgba(0,200,151,0.1); color: var(--green); }
+.pnl-neg { background: rgba(255,91,91,0.1); color: var(--red); }
+.pnl-neu { background: rgba(136,146,176,0.1); color: var(--muted); }
+.etf-total-row td {
+  background: linear-gradient(135deg, rgba(124,92,228,0.05), rgba(255,77,141,0.03));
+  font-weight: 700 !important;
+  border-top: 2px solid var(--border);
+  border-bottom: none !important;
+}
+
+/* ── 도넛 차트 ── */
+.donut-wrap { position: relative; height: 180px; margin-bottom: 20px; }
+.donut-center {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center; pointer-events: none;
+}
+.donut-center-val { font-family: 'Nunito', sans-serif; font-size: 16px; font-weight: 800; color: var(--text); }
+.donut-center-label { font-size: 10px; color: var(--muted); font-weight: 600; margin-top: 2px; }
+.legend-list { display: flex; flex-direction: column; gap: 10px; }
+.legend-item { display: flex; align-items: center; justify-content: space-between; }
+.legend-left { display: flex; align-items: center; gap: 10px; font-size: 12px; font-weight: 600; color: var(--muted); }
+.legend-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+.legend-right { display: flex; align-items: center; gap: 8px; }
+.legend-pct { font-size: 11px; color: var(--muted); font-weight: 600; }
+.legend-val { font-family: 'Nunito', sans-serif; font-size: 13px; font-weight: 800; color: var(--text); }
+
+/* ── 그라디언트 배너 카드 ── */
+.banner-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.banner-card {
+  border-radius: 18px;
+  padding: 22px;
+  color: white;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+  transition: transform 0.15s;
+}
+.banner-card:hover { transform: translateY(-2px); }
+.banner-card::before {
+  content: '';
+  position: absolute;
+  top: -20px; right: -20px;
+  width: 100px; height: 100px;
+  background: rgba(255,255,255,0.12);
+  border-radius: 50%;
+}
+.banner-card.pink { background: var(--grad-pink); box-shadow: 0 6px 20px rgba(255,77,141,0.35); }
+.banner-card.blue { background: var(--grad-blue); box-shadow: 0 6px 20px rgba(79,142,255,0.35); }
+.banner-card.green { background: var(--grad-green); box-shadow: 0 6px 20px rgba(0,200,151,0.35); }
+.banner-card-label { font-size: 11px; font-weight: 700; opacity: 0.85; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px; }
+.banner-card-val { font-family: 'Nunito', sans-serif; font-size: 26px; font-weight: 800; line-height: 1; margin-bottom: 6px; position: relative; z-index: 1; }
+.banner-card-sub { font-size: 11px; opacity: 0.75; font-weight: 600; }
+.banner-wave {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 40px;
+  opacity: 0.15;
+}
+
+/* ── 하단 그리드 ── */
+.bottom-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+.deposit-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+}
+.deposit-row:last-child { border-bottom: none; }
+.deposit-left { display: flex; align-items: center; gap: 10px; }
+.deposit-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+.deposit-name { font-size: 13px; font-weight: 700; color: var(--text); }
+.deposit-val { font-family: 'Nunito', sans-serif; font-size: 15px; font-weight: 800; color: var(--text); }
+
+.stock-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--bg);
+  border-radius: 12px;
+  margin-bottom: 8px;
+  border: 1px solid var(--border);
+}
+.stock-row:last-child { margin-bottom: 0; }
+.stock-label { font-size: 12px; font-weight: 600; color: var(--muted); }
+.stock-val { font-family: 'Nunito', sans-serif; font-size: 14px; font-weight: 800; color: var(--text); }
+
+/* ── 로딩 ── */
+.loading { display: flex; align-items: center; justify-content: center; padding: 2rem; color: var(--muted); font-size: 13px; gap: 8px; font-weight: 600; }
+.spinner { width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--purple); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── 모바일 ── */
+@media (max-width: 1024px) {
+  .sidebar { display: none; }
+  .main { margin-left: 0; }
+  .hero-grid { grid-template-columns: 1fr; }
+  .main-grid { grid-template-columns: 1fr; }
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .banner-grid { grid-template-columns: 1fr; }
+  .bottom-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .content { padding: 16px; }
+  .topbar { padding: 0 16px; }
+  .kpi-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .hero-val { font-size: 26px; }
+  .topbar-left p { display: none; }
+}
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- 사이드바 -->
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">💰</div>
+      <span class="logo-text">WONNY</span>
+    </div>
+    <div class="sidebar-nav">
+      <div class="nav-label">메뉴</div>
+      <div class="nav-item active"><span class="nav-icon">📊</span>통합 대시보드</div>
+      <div class="nav-label">자산</div>
+      <div class="nav-item"><span class="nav-icon">📈</span>ETF 현황</div>
+      <div class="nav-item"><span class="nav-icon">💹</span>주식</div>
+      <div class="nav-item"><span class="nav-icon">🏦</span>예적금</div>
+      <div class="nav-item"><span class="nav-icon">💵</span>현금</div>
+    </div>
+    <div class="sidebar-footer">
+      <span id="sideLastUpdate">—</span>
+    </div>
+  </div>
+
+  <!-- 메인 -->
+  <div class="main">
+    <!-- 탑바 -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <h2>통합 자산 대시보드</h2>
+        <p id="topbarSub">데이터 불러오는 중...</p>
+      </div>
+      <div class="topbar-right">
+        <div class="status-pill">
+          <div class="status-dot" id="sDot" style="background:var(--amber);"></div>
+          <span id="sTxt">연결 중...</span>
+        </div>
+        <button class="refresh-btn" onclick="run()">↻ 새로고침</button>
+      </div>
+    </div>
+
+    <!-- 콘텐츠 -->
+    <div class="content">
+
+      <!-- 히어로 + 자산 그래프 -->
+      <div class="hero-grid">
+        <div class="hero-card">
+          <div>
+            <div class="hero-label">Total Assets</div>
+            <div class="hero-val" id="heroTotal">—</div>
+            <div class="hero-sub" id="heroSub">전체 자산 합계</div>
+          </div>
+          <div class="hero-badges" id="heroBadges"></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">월별 총 자산 추이</div>
+              <div class="chart-sub" id="chartSub">월말 기준 총 자산 변화</div>
+            </div>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="assetChart" role="img" aria-label="월별 총 자산 추이 차트">월별 자산 변화 데이터</canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI -->
+      <div class="kpi-grid">
+        <div class="kpi">
+          <div class="kpi-icon pink">📈</div>
+          <div class="kpi-info">
+            <div class="kpi-label">ETF 평가금</div>
+            <div class="kpi-val" id="kEtf">—</div>
+            <div class="kpi-sub" id="kEtfSub">—</div>
+          </div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-icon purple">💹</div>
+          <div class="kpi-info">
+            <div class="kpi-label">주식 투자금</div>
+            <div class="kpi-val" id="kStock">—</div>
+            <div class="kpi-sub" id="kStockSub">—</div>
+          </div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-icon blue">🏦</div>
+          <div class="kpi-info">
+            <div class="kpi-label">예적금</div>
+            <div class="kpi-val" id="kDeposit">—</div>
+            <div class="kpi-sub" id="kDepositSub">—</div>
+          </div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-icon green">💵</div>
+          <div class="kpi-info">
+            <div class="kpi-label">ETF 손익</div>
+            <div class="kpi-val" id="kPnl">—</div>
+            <div class="kpi-sub" id="kPnlSub">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 배너 카드 -->
+      <div class="banner-grid">
+        <div class="banner-card pink">
+          <div class="banner-card-label">월 배당 수익</div>
+          <div class="banner-card-val" id="bDiv">—</div>
+          <div class="banner-card-sub">예상 월 분배금 (세전)</div>
+        </div>
+        <div class="banner-card blue">
+          <div class="banner-card-label">연간 배당</div>
+          <div class="banner-card-val" id="bAnnual">—</div>
+          <div class="banner-card-sub">연간 예상 분배금</div>
+        </div>
+        <div class="banner-card green">
+          <div class="banner-card-label">ETF 수익률</div>
+          <div class="banner-card-val" id="bPnlPct">—</div>
+          <div class="banner-card-sub" id="bPnlSub">총 투자금 대비</div>
+        </div>
+      </div>
+
+      <!-- ETF 테이블 + 도넛 -->
+      <div class="main-grid">
+        <div class="card">
+          <div class="card-title">
+            ETF 보유 현황
+            <span class="card-badge" id="etfCount">0종목</span>
+          </div>
+          <div id="etfTableWrap">
+            <div class="loading"><div class="spinner"></div>불러오는 중...</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">자산 구성</div>
+          <div class="donut-wrap">
+            <canvas id="donutChart" role="img" aria-label="전체 자산 구성 도넛 차트">자산 구성</canvas>
+            <div class="donut-center">
+              <div class="donut-center-val" id="donutCenter">—</div>
+              <div class="donut-center-label">총 자산</div>
+            </div>
+          </div>
+          <div class="legend-list" id="donutLegend"></div>
+        </div>
+      </div>
+
+      <!-- 예적금 + 주식/현금 -->
+      <div class="bottom-grid">
+        <div class="card">
+          <div class="card-title">예적금 현황</div>
+          <div id="depositList"><div class="loading"><div class="spinner"></div></div></div>
+        </div>
+        <div class="card">
+          <div class="card-title">주식 · 현금 요약</div>
+          <div id="stockCashList"><div class="loading"><div class="spinner"></div></div></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+// ── URL ──────────────────────────────────────────────────
+const ETF_URL    = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTmI2XfONV1PQx7eXyae_bdue-76a8LMqTqR5zjmkTjI97B5D1f7iiTTJdmxoGa2wpeqONul8FommSo/pub?gid=0&single=true&output=csv';
+const DEP_URL    = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTmI2XfONV1PQx7eXyae_bdue-76a8LMqTqR5zjmkTjI97B5D1f7iiTTJdmxoGa2wpeqONul8FommSo/pub?gid=187260528&single=true&output=csv';
+const TRADE_URL  = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRgDk4qNXL-ByfHEPG7pwnK8Zz96-IPU5GlC0D_kFipnAkKiBtSIvyQsnZWZ0uofAA51iqxOCsZ2-_W/pub?gid=512959016&single=true&output=csv';
+const CASH_URL   = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRgDk4qNXL-ByfHEPG7pwnK8Zz96-IPU5GlC0D_kFipnAkKiBtSIvyQsnZWZ0uofAA51iqxOCsZ2-_W/pub?gid=2018962040&single=true&output=csv';
+// ⬇ 자산히스토리 시트 URL — 만들고 나서 여기에 붙여넣기
+const HISTORY_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTmI2XfONV1PQx7eXyae_bdue-76a8LMqTqR5zjmkTjI97B5D1f7iiTTJdmxoGa2wpeqONul8FommSo/pub?gid=69225170&single=true&output=csv';
+
+const ETF_COLORS = {
+  'TIGER 미국S&P500':        '#7c5ce4',
+  'ACE KRX 금현물':           '#ff8c42',
+  'ACE 미국배당다우존스':     '#4f8eff',
+  'ACE 미국30년국채(H)':      '#00c897',
+  'TIGER 리츠부동산인프라':   '#ff4d8d',
+};
+const ETF_SHORT = {
+  'TIGER 미국S&P500':        'S&P500',
+  'ACE KRX 금현물':           '금현물',
+  'ACE 미국배당다우존스':     '배당다우',
+  'ACE 미국30년국채(H)':      '30년국채',
+  'TIGER 리츠부동산인프라':   '리츠',
+};
+
+const nv  = v => Number(String(v||0).replace(/,/g,''))||0;
+const fmt = v => Math.round(v).toLocaleString('ko-KR');
+const fmtW = v => (v>=0?'+':'')+fmt(v);
+const fmtP = v => (v>=0?'+':'')+v.toFixed(2)+'%';
+const parseCsv = url => new Promise((res,rej)=>{
+  Papa.parse(url,{download:true,header:true,skipEmptyLines:true,
+    complete:r=>res(r.data),error:e=>rej(e)});
+});
+
+let donutChart = null;
+let assetChart = null;
+
+function render(etfRows, depRows, tradeRows, cashRows, historyRows) {
+  const cleanNum = v => Number(String(v||0).replace(/,/g,''));
+
+  // 현금
+  const cashKRW    = cleanNum(cashRows.find(r=>r['구분']==='원화')?.['금액']);
+  const cashUSD    = cleanNum(cashRows.find(r=>r['구분']==='달러')?.['금액']);
+  const usdRate    = cleanNum(cashRows.find(r=>r['구분']==='환율')?.['금액'])||1480;
+  const cashUSDkrw = cashUSD * usdRate;
+  const totalCash  = cashKRW + cashUSDkrw;
+
+  // 예적금
+  const depItems = depRows.filter(r=>r['구분']&&r['잔액']);
+  const totalDep = depItems.reduce((s,r)=>s+cleanNum(r['잔액']),0);
+
+  // 주식
+  const holding = tradeRows.filter(r=>String(r['상태']||'').includes('보유'));
+  const sold    = tradeRows.filter(r=>String(r['상태']||'').includes('매도'));
+  const totalStockInvest = holding.reduce((s,r)=>s+cleanNum(r['매수금액(원)']),0);
+  const totalPnl = sold.reduce((s,r)=>s+cleanNum(r['손익(원)']),0);
+  const krAmt = holding.filter(r=>r['시장']==='국장').reduce((s,r)=>s+cleanNum(r['매수금액(원)']),0);
+  const usAmt = holding.filter(r=>r['시장']==='미장').reduce((s,r)=>s+cleanNum(r['매수금액(원)']),0);
+  const winners = Object.values(sold.reduce((acc,r)=>{
+    const n=r['종목']; if(!acc[n]) acc[n]={pnl:0};
+    acc[n].pnl+=cleanNum(r['손익(원)']); return acc;
+  },{})).filter(r=>r.pnl>0).length;
+  const totalSoldNames = Object.keys(sold.reduce((acc,r)=>({...acc,[r['종목']]:1}),{})).length;
+
+  // ETF
+  const etfData = etfRows.map(r=>({
+    name:     r['종목명']||'',
+    qty:      cleanNum(r['수량']),
+    price:    cleanNum(r['현재가(자동)']),
+    invested: cleanNum(r['총투자금']),
+    eval:     cleanNum(r['평가금(자동)']),
+    pnl:      cleanNum(r['손익(자동)']),
+    divPer:   cleanNum(r['좌당분배금']),
+    divFreq:  cleanNum(r['배당주기']),
+  })).filter(r=>r.name);
+
+  const totalEtfEval = etfData.reduce((s,r)=>s+r.eval,0);
+  const totalEtfPnl  = etfData.reduce((s,r)=>s+r.pnl,0);
+  const totalEtfInv  = etfData.reduce((s,r)=>s+r.invested,0);
+  const monthlyDiv   = etfData.reduce((s,r)=>s+r.qty*r.divPer,0);
+  const pnlPct = totalEtfInv>0 ? totalEtfPnl/totalEtfInv*100 : 0;
+
+  const grandTotal = totalEtfEval + totalStockInvest + totalDep + totalCash;
+
+  // ── 히어로 ──
+  document.getElementById('heroTotal').textContent = fmt(grandTotal)+'원';
+  document.getElementById('heroSub').textContent = `ETF ${fmt(totalEtfEval)} · 주식 ${fmt(totalStockInvest)} · 예적금 ${fmt(totalDep)}`;
+  document.getElementById('donutCenter').textContent = Math.round(grandTotal/10000).toLocaleString()+'만';
+  document.getElementById('heroBadges').innerHTML = [
+    `ETF ${(totalEtfEval/grandTotal*100).toFixed(1)}%`,
+    `주식 ${(totalStockInvest/grandTotal*100).toFixed(1)}%`,
+    `예적금 ${(totalDep/grandTotal*100).toFixed(1)}%`,
+  ].map(t=>`<div class="hero-badge">${t}</div>`).join('');
+
+  // ── KPI ──
+  document.getElementById('kEtf').textContent = fmt(totalEtfEval)+'원';
+  document.getElementById('kEtfSub').textContent = `${etfData.filter(r=>r.qty>0).length}종목`;
+  document.getElementById('kStock').textContent = fmt(totalStockInvest)+'원';
+  document.getElementById('kStockSub').textContent = `국장 ${holding.filter(r=>r['시장']==='국장').length} · 미장 ${holding.filter(r=>r['시장']==='미장').length}`;
+  document.getElementById('kDeposit').textContent = fmt(totalDep)+'원';
+  document.getElementById('kDepositSub').textContent = `${depItems.length}건`;
+  const pEl = document.getElementById('kPnl');
+  pEl.textContent = fmtW(totalEtfPnl)+'원';
+  pEl.className = 'kpi-val '+(totalEtfPnl>=0?'pos':'neg');
+  document.getElementById('kPnlSub').textContent = fmtP(pnlPct);
+
+  // ── 배너 ──
+  document.getElementById('bDiv').textContent = fmt(monthlyDiv)+'원';
+  document.getElementById('bAnnual').textContent = fmt(monthlyDiv*12)+'원';
+  const bPnl = document.getElementById('bPnlPct');
+  bPnl.textContent = fmtP(pnlPct);
+  document.getElementById('bPnlSub').textContent = `${fmtW(totalEtfPnl)}원 손익`;
+
+  // ── ETF 테이블 ──
+  document.getElementById('etfCount').textContent = etfData.filter(r=>r.qty>0).length+'종목';
+  document.getElementById('etfTableWrap').innerHTML = `
+  <table class="etf-table">
+    <thead><tr>
+      <th>종목</th><th>수량</th><th>현재가</th><th>평가금</th><th>손익</th><th>월배당</th>
+    </tr></thead>
+    <tbody>
+    ${etfData.map(r=>{
+      const color = ETF_COLORS[r.name]||'#7c5ce4';
+      const short = ETF_SHORT[r.name]||r.name;
+      const pCls  = r.pnl>0?'pnl-pos':r.pnl<0?'pnl-neg':'pnl-neu';
+      const pSign = r.pnl>=0?'+':'';
+      const md    = r.qty * r.divPer;
+      const pct   = r.invested>0?(r.pnl/r.invested*100):0;
+      return `<tr>
+        <td><div class="etf-name-cell">
+          <div class="etf-color-bar" style="background:${color};"></div>
+          <div><div class="etf-name-text">${short}</div><div class="etf-code">${r.name}</div></div>
+        </div></td>
+        <td>${r.qty.toLocaleString()}</td>
+        <td>${fmt(r.price)}</td>
+        <td style="font-weight:700;">${fmt(r.eval)}</td>
+        <td><span class="pnl-badge ${pCls}">${pSign}${fmt(r.pnl)} (${pSign}${pct.toFixed(1)}%)</span></td>
+        <td style="color:var(--green);font-weight:700;">${md>0?fmt(md)+'원':'—'}</td>
+      </tr>`;
+    }).join('')}
+    <tr class="etf-total-row">
+      <td colspan="3">합계</td>
+      <td>${fmt(totalEtfEval)}</td>
+      <td><span class="pnl-badge ${totalEtfPnl>=0?'pnl-pos':'pnl-neg'}">${fmtW(totalEtfPnl)} (${fmtP(pnlPct)})</span></td>
+      <td style="color:var(--green);">${fmt(monthlyDiv)}원</td>
+    </tr>
+    </tbody>
+  </table>`;
+
+  // ── 도넛 ──
+  const dData = [
+    {label:'ETF',    val:totalEtfEval,      color:'#7c5ce4'},
+    {label:'주식',   val:totalStockInvest,  color:'#ff4d8d'},
+    {label:'예적금', val:totalDep,          color:'#4f8eff'},
+    {label:'현금',   val:totalCash,         color:'#00c897'},
+  ].filter(d=>d.val>0);
+
+  if(donutChart) donutChart.destroy();
+  donutChart = new Chart(document.getElementById('donutChart'),{
+    type:'doughnut',
+    data:{
+      labels:dData.map(d=>d.label),
+      datasets:[{data:dData.map(d=>d.val),backgroundColor:dData.map(d=>d.color),borderWidth:3,borderColor:'#fff',hoverOffset:10}]
+    },
+    options:{responsive:true,maintainAspectRatio:false,cutout:'70%',
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${fmt(ctx.raw)}원 (${(ctx.raw/grandTotal*100).toFixed(1)}%)`}}}
+    }
+  });
+  document.getElementById('donutLegend').innerHTML = dData.map(d=>`
+    <div class="legend-item">
+      <div class="legend-left"><div class="legend-dot" style="background:${d.color};border-radius:3px;"></div>${d.label}</div>
+      <div class="legend-right">
+        <span class="legend-pct">${(d.val/grandTotal*100).toFixed(1)}%</span>
+        <span class="legend-val">${fmt(d.val)}</span>
+      </div>
+    </div>`).join('');
+
+  // ── 월별 자산 그래프 ──
+  let histLabels = [], histVals = [];
+  if(historyRows && historyRows.length>0) {
+    const sorted = historyRows.filter(r=>r['월']&&r['총자산']).sort((a,b)=>a['월']>b['월']?1:-1);
+    histLabels = sorted.map(r=>r['월']);
+    histVals   = sorted.map(r=>cleanNum(r['총자산(자동)']||r['총자산']||0));
+    document.getElementById('chartSub').textContent = `${histLabels[0]} ~ ${histLabels[histLabels.length-1]} · ${histLabels.length}개월`;
+  } else {
+    // 히스토리 없으면 현재 데이터 1포인트만
+    const now = new Date();
+    histLabels = [`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`];
+    histVals   = [grandTotal];
+    document.getElementById('chartSub').textContent = '자산히스토리 시트를 추가하면 추이가 표시됩니다';
+  }
+
+  const gradient = document.getElementById('assetChart').getContext('2d').createLinearGradient(0,0,0,150);
+  gradient.addColorStop(0,'rgba(124,92,228,0.3)');
+  gradient.addColorStop(1,'rgba(124,92,228,0.0)');
+
+  if(assetChart) assetChart.destroy();
+  assetChart = new Chart(document.getElementById('assetChart'),{
+    type:'line',
+    data:{
+      labels:histLabels,
+      datasets:[{
+        label:'총 자산',
+        data:histVals,
+        borderColor:'#7c5ce4',
+        borderWidth:2.5,
+        pointBackgroundColor:'#7c5ce4',
+        pointRadius:4,
+        pointHoverRadius:7,
+        fill:true,
+        backgroundColor:gradient,
+        tension:0.45,
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${fmt(ctx.raw)}원`}}},
+      scales:{
+        x:{ticks:{font:{size:10},color:'#8892b0',maxRotation:0},grid:{display:false},border:{color:'#e8ecf4'}},
+        y:{ticks:{font:{size:10},color:'#8892b0',callback:v=>(v/10000).toFixed(0)+'만'},grid:{color:'#f5f6fa'},border:{color:'#e8ecf4'}}
+      }
+    }
+  });
+
+  // ── 예적금 ──
+  document.getElementById('depositList').innerHTML = `
+    ${depItems.map((r,i)=>{
+      const icons = ['🏦','💰','🏧','💳'];
+      return `<div class="deposit-row">
+        <div class="deposit-left">
+          <div class="deposit-icon" style="background:${['rgba(79,142,255,0.1)','rgba(124,92,228,0.1)','rgba(0,200,151,0.1)','rgba(255,140,66,0.1)'][i%4]};">${icons[i%4]}</div>
+          <span class="deposit-name">${r['구분']}</span>
+        </div>
+        <span class="deposit-val">${fmt(cleanNum(r['잔액']))}원</span>
+      </div>`;
+    }).join('')}
+    <div class="deposit-row" style="border-top:2px solid var(--border);margin-top:4px;padding-top:16px;">
+      <div class="deposit-left">
+        <div class="deposit-icon" style="background:rgba(255,77,141,0.1);">💎</div>
+        <span class="deposit-name" style="font-weight:700;">합계</span>
+      </div>
+      <span class="deposit-val" style="color:var(--purple);">${fmt(totalDep)}원</span>
+    </div>`;
+
+  // ── 주식·현금 ──
+  document.getElementById('stockCashList').innerHTML = `
+    <div class="stock-row"><span class="stock-label">📈 국장 투자금</span><span class="stock-val">${fmt(krAmt)}원</span></div>
+    <div class="stock-row"><span class="stock-label">🌐 미장 투자금</span><span class="stock-val">${fmt(usAmt)}원</span></div>
+    <div class="stock-row"><span class="stock-label">💰 실현 손익</span><span class="stock-val ${totalPnl>=0?'pos':'neg'}">${fmtW(totalPnl)}원</span></div>
+    <div class="stock-row"><span class="stock-label">🏆 승률</span><span class="stock-val">${totalSoldNames>0?(winners/totalSoldNames*100).toFixed(1)+'%':'—'}</span></div>
+    <div class="stock-row" style="margin-top:8px;"><span class="stock-label">🇰🇷 원화 현금</span><span class="stock-val">${fmt(cashKRW)}원</span></div>
+    <div class="stock-row"><span class="stock-label">🇺🇸 달러 현금</span><span class="stock-val">$${cashUSD.toLocaleString()} <span style="color:var(--muted);font-size:11px;">(${fmt(cashUSDkrw)}원)</span></span></div>
+    <div class="stock-row"><span class="stock-label">💱 환율</span><span class="stock-val" style="color:var(--muted);">${fmt(usdRate)}원</span></div>`;
+
+  // ── 상태 ──
+  const now = new Date().toLocaleTimeString('ko-KR');
+  document.getElementById('sDot').style.background = '#00c897';
+  document.getElementById('sTxt').textContent = `연동 완료 · ${now}`;
+  document.getElementById('topbarSub').textContent = `마지막 업데이트: ${new Date().toLocaleString('ko-KR')}`;
+  document.getElementById('sideLastUpdate').textContent = now;
+}
+
+async function run() {
+  document.getElementById('sDot').style.background = '#ffb830';
+  document.getElementById('sTxt').textContent = '데이터 불러오는 중...';
+  try {
+    const fetches = [parseCsv(ETF_URL), parseCsv(DEP_URL), parseCsv(TRADE_URL), parseCsv(CASH_URL)];
+    if(HISTORY_URL) fetches.push(parseCsv(HISTORY_URL));
+    const results = await Promise.all(fetches);
+    render(results[0], results[1], results[2], results[3], results[4]||[]);
+  } catch(e) {
+    document.getElementById('sDot').style.background = '#ff5b5b';
+    document.getElementById('sTxt').textContent = '오류: '+e.message;
+  }
+}
+
+run();
+</script>
+</body>
+</html>
