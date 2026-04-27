@@ -976,7 +976,7 @@ function render(etfRows, depRows, tradeRows, cashRows, historyRows) {
       plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${fmt(ctx.raw)}원`}}},
       scales:{
         x:{ticks:{font:{size:10},color:'#8892b0',maxRotation:0},grid:{display:false},border:{color:'#e8ecf4'}},
-        y:{ticks:{font:{size:10},color:'#8892b0',callback:v=>(v/10000).toFixed(0)+'만'},grid:{color:'#f5f6fa'},border:{color:'#e8ecf4'}}
+        y:{ticks:{font:{size:10},color:'#8892b0',stepSize:1000000,callback:v=>(v/10000).toFixed(0)+'만'},grid:{color:'#f5f6fa'},border:{color:'#e8ecf4'}}
       }
     }
   });
