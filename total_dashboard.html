@@ -423,14 +423,14 @@ body {
 }
 
 /* ── 도넛 차트 ── */
-.donut-wrap { position: relative; height: 180px; margin-bottom: 20px; }
+.donut-wrap { position: relative; height: 280px; margin-bottom: 24px; }
 .donut-center {
   position: absolute; top: 50%; left: 50%;
   transform: translate(-50%, -50%);
   text-align: center; pointer-events: none;
 }
-.donut-center-val { font-family: 'Nunito', sans-serif; font-size: 16px; font-weight: 800; color: var(--text); }
-.donut-center-label { font-size: 10px; color: var(--muted); font-weight: 600; margin-top: 2px; }
+.donut-center-val { font-family: 'Nunito', sans-serif; font-size: 20px; font-weight: 800; color: var(--text); }
+.donut-center-label { font-size: 11px; color: var(--muted); font-weight: 600; margin-top: 2px; }
 .legend-list { display: flex; flex-direction: column; gap: 10px; }
 .legend-item { display: flex; align-items: center; justify-content: space-between; }
 .legend-left { display: flex; align-items: center; gap: 10px; font-size: 12px; font-weight: 600; color: var(--muted); }
@@ -667,9 +667,9 @@ body {
             <div class="loading"><div class="spinner"></div>불러오는 중...</div>
           </div>
         </div>
-        <div class="card">
-          <div class="card-title">자산 구성</div>
-          <div class="donut-wrap">
+        <div class="card" style="display:flex;flex-direction:column;align-items:center;justify-content:center;">
+          <div class="card-title" style="width:100%;">자산 구성</div>
+          <div class="donut-wrap" style="width:100%;">
             <canvas id="donutChart" role="img" aria-label="전체 자산 구성 도넛 차트">자산 구성</canvas>
             <div class="donut-center">
               <div class="donut-center-val" id="donutCenter">—</div>
