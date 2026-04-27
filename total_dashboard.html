@@ -517,7 +517,7 @@ body {
       <div class="nav-item active"><span class="nav-icon">📊</span>통합 대시보드</div>
       <div class="nav-label">자산</div>
       <div class="nav-item"><span class="nav-icon">📈</span>ETF 현황</div>
-      <div class="nav-item"><span class="nav-icon">💹</span>주식</div>
+      <div class="nav-item" onclick="openStockModal()"><span class="nav-icon">💹</span>주식</div>
       <div class="nav-item"><span class="nav-icon">🏦</span>예적금</div>
       <div class="nav-item"><span class="nav-icon">💵</span>현금</div>
     </div>
@@ -699,6 +699,81 @@ const parseCsv = url => new Promise((res,rej)=>{
 
 let donutChart = null;
 let assetChart = null;
+let g_holding = [];
+let g_sold = [];
+let g_usdRate = 1480;
+
+// ── 주식 모달 ──────────────────────────────────────────
+function openStockModal() {
+  const cleanNum = v => Number(String(v||0).replace(/,/g,''));
+  const grouped = {};
+  g_holding.forEach(r => {
+    const name = r['종목']||''; const mkt = r['시장']||'';
+    const amt = cleanNum(r['매수금액(원)']); const qty = cleanNum(r['수량']);
+    const ticker = r['티커']||r['종목코드']||'';
+    if(!name) return;
+    if(!grouped[name]) grouped[name] = {name,mkt,amt:0,qty:0,ticker};
+    grouped[name].amt += amt; grouped[name].qty += qty;
+    if(!grouped[name].ticker && ticker) grouped[name].ticker = ticker;
+  });
+  const stocks = Object.values(grouped);
+  const krStocks = stocks.filter(s=>s.mkt==='국장');
+  const usStocks = stocks.filter(s=>s.mkt==='미장');
+  const totalInvest = stocks.reduce((s,r)=>s+r.amt,0);
+
+  const soldGrouped = {};
+  g_sold.forEach(r => {
+    const name = r['종목']||''; const pnl = cleanNum(r['손익(원)']);
+    if(!soldGrouped[name]) soldGrouped[name] = 0;
+    soldGrouped[name] += pnl;
+  });
+  const totalPnl = Object.values(soldGrouped).reduce((s,v)=>s+v,0);
+  const winners = Object.values(soldGrouped).filter(v=>v>0).length;
+  const totalSold = Object.keys(soldGrouped).length;
+
+  document.getElementById('modalTotalInvest').textContent = fmt(totalInvest)+'원';
+  const rpEl = document.getElementById('modalRealPnl');
+  rpEl.textContent = fmtW(totalPnl)+'원';
+  rpEl.style.color = totalPnl>=0?'#00c897':'#ff5b5b';
+  document.getElementById('modalWinRate').textContent = totalSold>0?(winners/totalSold*100).toFixed(1)+'%':'—';
+
+  const colors = ['#7c5ce4','#ff4d8d','#4f8eff','#00c897','#ff8c42','#ffb830'];
+  const makeCard = (s, isUs) => {
+    const pct = totalInvest>0?(s.amt/totalInvest*100).toFixed(1):0;
+    const colorIdx = stocks.indexOf(s) % colors.length;
+    const amtDisplay = isUs
+      ? `$${Math.round(s.amt/g_usdRate).toLocaleString()} <span style="color:var(--muted);font-size:11px;">(${fmt(s.amt)}원)</span>`
+      : `${fmt(s.amt)}원`;
+    return `
+    <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--bg);border-radius:14px;border:1px solid var(--border);">
+      <div style="width:42px;height:42px;border-radius:12px;background:${colors[colorIdx]}20;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">💹</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:700;font-size:14px;color:var(--text);">${s.name}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;">${s.ticker?s.ticker+' · ':''}${s.qty.toLocaleString()}주</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0;">
+        <div style="font-family:'Nunito',sans-serif;font-weight:800;font-size:14px;">${amtDisplay}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;">비중 ${pct}%</div>
+      </div>
+    </div>`;
+  };
+
+  document.getElementById('modalKrList').innerHTML = krStocks.length>0
+    ? krStocks.map(s=>makeCard(s,false)).join('')
+    : '<div style="color:var(--muted);font-size:13px;text-align:center;padding:16px 0;">보유 종목 없음</div>';
+  document.getElementById('modalUsList').innerHTML = usStocks.length>0
+    ? usStocks.map(s=>makeCard(s,true)).join('')
+    : '<div style="color:var(--muted);font-size:13px;text-align:center;padding:16px 0;">보유 종목 없음</div>';
+
+  document.getElementById('stockModal').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeStockModal(e) {
+  if(e && e.target !== document.getElementById('stockModal')) return;
+  document.getElementById('stockModal').style.display = 'none';
+  document.body.style.overflow = '';
+}
 
 function render(etfRows, depRows, tradeRows, cashRows, historyRows) {
   const cleanNum = v => Number(String(v||0).replace(/,/g,''));
@@ -717,6 +792,10 @@ function render(etfRows, depRows, tradeRows, cashRows, historyRows) {
   // 주식
   const holding = tradeRows.filter(r=>String(r['상태']||'').includes('보유'));
   const sold    = tradeRows.filter(r=>String(r['상태']||'').includes('매도'));
+  // 글로벌 저장 (모달용)
+  g_holding = holding;
+  g_sold = sold;
+  g_usdRate = cleanNum(cashRows.find(r=>r['구분']==='환율')?.['금액'])||1480;
   const totalStockInvest = holding.reduce((s,r)=>s+cleanNum(r['매수금액(원)']),0);
   const totalPnl = sold.reduce((s,r)=>s+cleanNum(r['손익(원)']),0);
   const krAmt = holding.filter(r=>r['시장']==='국장').reduce((s,r)=>s+cleanNum(r['매수금액(원)']),0);
@@ -957,5 +1036,40 @@ async function run() {
 
 run();
 </script>
+<!-- 주식 보유 팝업 모달 -->
+<div id="stockModal" onclick="closeStockModal(event)" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:999;background:rgba(26,31,54,0.5);backdrop-filter:blur(4px);">
+  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:90%;max-width:580px;max-height:82vh;background:var(--white);border-radius:24px;box-shadow:0 20px 60px rgba(0,0,0,0.2);overflow:hidden;display:flex;flex-direction:column;">
+    <div style="background:var(--grad-purple);padding:22px 26px;color:white;flex-shrink:0;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <div>
+          <div style="font-size:10px;font-weight:700;opacity:0.8;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:3px;">STOCK PORTFOLIO</div>
+          <div style="font-family:'Nunito',sans-serif;font-size:18px;font-weight:800;">보유 주식 현황</div>
+        </div>
+        <button onclick="document.getElementById('stockModal').style.display='none';document.body.style.overflow='';" style="background:rgba(255,255,255,0.2);border:none;color:white;width:34px;height:34px;border-radius:50%;font-size:16px;cursor:pointer;line-height:1;">✕</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+        <div style="background:rgba(255,255,255,0.15);border-radius:12px;padding:11px 14px;backdrop-filter:blur(4px);">
+          <div style="font-size:10px;opacity:0.8;margin-bottom:4px;">총 투자금</div>
+          <div style="font-family:'Nunito',sans-serif;font-size:15px;font-weight:800;" id="modalTotalInvest">—</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.15);border-radius:12px;padding:11px 14px;backdrop-filter:blur(4px);">
+          <div style="font-size:10px;opacity:0.8;margin-bottom:4px;">실현 손익</div>
+          <div style="font-family:'Nunito',sans-serif;font-size:15px;font-weight:800;" id="modalRealPnl">—</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.15);border-radius:12px;padding:11px 14px;backdrop-filter:blur(4px);">
+          <div style="font-size:10px;opacity:0.8;margin-bottom:4px;">승률</div>
+          <div style="font-family:'Nunito',sans-serif;font-size:15px;font-weight:800;" id="modalWinRate">—</div>
+        </div>
+      </div>
+    </div>
+    <div style="overflow-y:auto;padding:20px 24px;flex:1;">
+      <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px;">🇰🇷 국내주식</div>
+      <div id="modalKrList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px;"></div>
+      <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px;">🇺🇸 미국주식</div>
+      <div id="modalUsList" style="display:flex;flex-direction:column;gap:8px;"></div>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
