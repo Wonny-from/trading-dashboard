@@ -761,8 +761,10 @@ function render(etfRows, depRows, tradeRows, cashRows, historyRows) {
   // ── KPI ──
   document.getElementById('kEtf').textContent = fmt(totalEtfEval)+'원';
   document.getElementById('kEtfSub').textContent = `${etfData.filter(r=>r.qty>0).length}종목`;
+  const krCount = new Set(holding.filter(r=>r['시장']==='국장').map(r=>r['종목'])).size;
+  const usCount = new Set(holding.filter(r=>r['시장']==='미장').map(r=>r['종목'])).size;
   document.getElementById('kStock').textContent = fmt(totalStockInvest)+'원';
-  document.getElementById('kStockSub').textContent = `국장 ${holding.filter(r=>r['시장']==='국장').length} · 미장 ${holding.filter(r=>r['시장']==='미장').length}`;
+  document.getElementById('kStockSub').textContent = `국장 ${krCount}종목 · 미장 ${usCount}종목`;
   document.getElementById('kDeposit').textContent = fmt(totalDep)+'원';
   document.getElementById('kDepositSub').textContent = `${depItems.length}건`;
   const pEl = document.getElementById('kPnl');
