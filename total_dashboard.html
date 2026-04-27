@@ -749,12 +749,13 @@ function render(etfRows, depRows, tradeRows, cashRows, historyRows) {
 
   // ── 히어로 ──
   document.getElementById('heroTotal').textContent = fmt(grandTotal)+'원';
-  document.getElementById('heroSub').textContent = `ETF ${fmt(totalEtfEval)} · 주식 ${fmt(totalStockInvest)} · 예적금 ${fmt(totalDep)}`;
+  document.getElementById('heroSub').textContent = `ETF ${fmt(totalEtfEval)} · 주식 ${fmt(totalStockInvest)} · 예적금 ${fmt(totalDep)} · 예수금 ${fmt(totalCash)}`;
   document.getElementById('donutCenter').textContent = Math.round(grandTotal/10000).toLocaleString()+'만';
   document.getElementById('heroBadges').innerHTML = [
     `ETF ${(totalEtfEval/grandTotal*100).toFixed(1)}%`,
     `주식 ${(totalStockInvest/grandTotal*100).toFixed(1)}%`,
     `예적금 ${(totalDep/grandTotal*100).toFixed(1)}%`,
+    `예수금 ${(totalCash/grandTotal*100).toFixed(1)}%`,
   ].map(t=>`<div class="hero-badge">${t}</div>`).join('');
 
   // ── KPI ──
@@ -817,7 +818,7 @@ function render(etfRows, depRows, tradeRows, cashRows, historyRows) {
     {label:'ETF',    val:totalEtfEval,      color:'#7c5ce4'},
     {label:'주식',   val:totalStockInvest,  color:'#ff4d8d'},
     {label:'예적금', val:totalDep,          color:'#4f8eff'},
-    {label:'현금',   val:totalCash,         color:'#00c897'},
+    {label:'예수금', val:totalCash,         color:'#00c897'},
   ].filter(d=>d.val>0);
 
   if(donutChart) donutChart.destroy();
@@ -925,9 +926,10 @@ function render(etfRows, depRows, tradeRows, cashRows, historyRows) {
     <div class="stock-row"><span class="stock-label">🌐 미장 투자금</span><span class="stock-val">${fmt(usAmt)}원</span></div>
     <div class="stock-row"><span class="stock-label">💰 실현 손익</span><span class="stock-val ${totalPnl>=0?'pos':'neg'}">${fmtW(totalPnl)}원</span></div>
     <div class="stock-row"><span class="stock-label">🏆 승률</span><span class="stock-val">${totalSoldNames>0?(winners/totalSoldNames*100).toFixed(1)+'%':'—'}</span></div>
-    <div class="stock-row" style="margin-top:8px;"><span class="stock-label">🇰🇷 원화 현금</span><span class="stock-val">${fmt(cashKRW)}원</span></div>
-    <div class="stock-row"><span class="stock-label">🇺🇸 달러 현금</span><span class="stock-val">$${cashUSD.toLocaleString()} <span style="color:var(--muted);font-size:11px;">(${fmt(cashUSDkrw)}원)</span></span></div>
-    <div class="stock-row"><span class="stock-label">💱 환율</span><span class="stock-val" style="color:var(--muted);">${fmt(usdRate)}원</span></div>`;
+    <div class="stock-row" style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px;"><span class="stock-label">🇰🇷 원화 예수금</span><span class="stock-val">${fmt(cashKRW)}원</span></div>
+    <div class="stock-row"><span class="stock-label">🇺🇸 달러 예수금</span><span class="stock-val">$${cashUSD.toLocaleString()} <span style="color:var(--muted);font-size:11px;">(${fmt(cashUSDkrw)}원)</span></span></div>
+    <div class="stock-row"><span class="stock-label">💱 적용 환율</span><span class="stock-val" style="color:var(--muted);">${fmt(usdRate)}원</span></div>
+    <div class="stock-row" style="background:linear-gradient(135deg,rgba(0,200,151,0.08),rgba(0,229,179,0.05));border:1px solid rgba(0,200,151,0.2);"><span class="stock-label" style="font-weight:700;color:var(--green);">💵 예수금 합계</span><span class="stock-val" style="color:var(--green);">${fmt(totalCash)}원</span></div>`;
 
   // ── 상태 ──
   const now = new Date().toLocaleTimeString('ko-KR');
