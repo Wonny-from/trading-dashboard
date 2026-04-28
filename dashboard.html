@@ -209,7 +209,8 @@ function buildAccordion(rows) {
   const tableMap = {};
   [...rows].reverse().forEach(r => {
     const mon = (r['매수일']||'').slice(0,7);
-    const key = r['종목']+'|'+(r['시장']||'')+'|'+(r['상태']||'')+'|'+(r['매수일']||mon);
+    const isHoldRow = String(r['상태']||'').includes('보유');
+    const key = r['종목']+'|'+(r['시장']||'')+'|'+(isHoldRow?'보유중':(r['매도일']||''));
     if (!tableMap[key]) {
       tableMap[key] = {
         종목: r['종목'], 시장: r['시장']||'', 상태: String(r['상태']||''),
