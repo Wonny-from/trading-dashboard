@@ -309,7 +309,8 @@ function render(rows, cashKRW, cashUSD, usdRate) {
 
   const soldByName = {};
   sold.forEach(r => {
-    const n = r['종목'];
+    // 종목+시장+매도일 기준으로 묶기 (여러 번 단타도 정확히 구분)
+    const n = r['종목']+'|'+(r['시장']||'')+'|'+(r['매도일']||'');
     if (!soldByName[n]) soldByName[n] = { pnl:0, buyAmt:0 };
     soldByName[n].pnl    += nv(r['손익(원)'])||0;
     soldByName[n].buyAmt += nv(r['매수금액(원)'])||0;
