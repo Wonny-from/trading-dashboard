@@ -318,7 +318,9 @@ function render(rows, cashKRW, cashUSD, usdRate) {
   const totalPnl = sg.reduce((s,r)=>s+r.pnl,0);
   const winners  = sg.filter(r=>r.pnl>0);
   const losers   = sg.filter(r=>r.pnl<0);
-  const pct      = sg.length>0 ? totalPnl/sg.reduce((s,r)=>s+r.buyAmt,0)*100 : 0;
+  // 투입금액 가중평균 수익률
+  const totalBuyAmt = sg.reduce((s,r)=>s+r.buyAmt,0);
+  const pct = totalBuyAmt>0 ? sg.reduce((s,r)=>s+(r.buyAmt>0?r.pnl/r.buyAmt*100*(r.buyAmt/totalBuyAmt):0),0) : 0;
 
   const hbn = {};
   holding.forEach(r => {
@@ -344,7 +346,7 @@ function render(rows, cashKRW, cashUSD, usdRate) {
   const pEl = document.getElementById('m-pnl');
   pEl.textContent = fmtW(totalPnl);
   pEl.className = 'metric-value '+(totalPnl>=0?'pos':'neg');
-  document.getElementById('m-pct').textContent = fmtP(pct)+' 전체';
+  document.getElementById('m-pct').textContent = fmtP(pct)+' 가중평균';
   document.getElementById('m-win').textContent = sg.length>0?(winners.length/sg.length*100).toFixed(1)+'%':'—';
   document.getElementById('m-winsub').textContent = `${winners.length}승 ${losers.length}패`;
 
