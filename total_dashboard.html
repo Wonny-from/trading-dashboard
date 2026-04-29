@@ -823,24 +823,33 @@ function openStockModal() {
   document.getElementById('modalWinRate').textContent = totalSold>0?(winners/totalSold*100).toFixed(1)+'%':'—';
 
   const colors = ['#7c5ce4','#ff4d8d','#4f8eff','#00c897','#ff8c42','#ffb830'];
+  const getLogoUrl = (ticker, isUs) => {
+    if (!ticker) return null;
+    const code = ticker.replace('.KS','').replace('.KQ','');
+    if (isUs) return 'https://assets.parqet.com/logos/symbol/'+ticker+'?format=jpg';
+    return 'https://file.alphasquare.co.kr/media/images/stock_logo/kr/'+code+'.png';
+  };
   const makeCard = (s, isUs) => {
     const pct = totalInvest>0?(s.amt/totalInvest*100).toFixed(1):0;
     const colorIdx = stocks.indexOf(s) % colors.length;
     const amtDisplay = isUs
-      ? `$${Math.round(s.amt/g_usdRate).toLocaleString()} <span style="color:var(--muted);font-size:11px;">(${fmt(s.amt)}원)</span>`
-      : `${fmt(s.amt)}원`;
-    return `
-    <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--bg);border-radius:14px;border:1px solid var(--border);">
-      <div style="width:42px;height:42px;border-radius:12px;background:${colors[colorIdx]}20;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">💹</div>
-      <div style="flex:1;min-width:0;">
-        <div style="font-weight:700;font-size:14px;color:var(--text);">${s.name}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:2px;">${s.ticker?s.ticker+' · ':''}${s.qty.toLocaleString()}주</div>
-      </div>
-      <div style="text-align:right;flex-shrink:0;">
-        <div style="font-family:'Nunito',sans-serif;font-weight:800;font-size:14px;">${amtDisplay}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:2px;">비중 ${pct}%</div>
-      </div>
-    </div>`;
+      ? '$'+Math.round(s.amt/g_usdRate).toLocaleString()+' <span style="color:var(--muted);font-size:11px;">('+fmt(s.amt)+'원)</span>'
+      : fmt(s.amt)+'원';
+    const logoUrl = getLogoUrl(s.ticker, isUs);
+    const logoHtml = logoUrl
+      ? '<img src="'+logoUrl+'" style="width:42px;height:42px;border-radius:12px;object-fit:cover;flex-shrink:0;" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';">'
+        +'<div style="width:42px;height:42px;border-radius:12px;background:'+colors[colorIdx]+'20;display:none;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">💹</div>'
+      : '<div style="width:42px;height:42px;border-radius:12px;background:'+colors[colorIdx]+'20;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">💹</div>';
+    return '<div style="display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--bg);border-radius:14px;border:1px solid var(--border);">'
+      +logoHtml
+      +'<div style="flex:1;min-width:0;">'
+      +'<div style="font-weight:700;font-size:14px;color:var(--text);">'+s.name+'</div>'
+      +'<div style="font-size:11px;color:var(--muted);margin-top:2px;">'+(s.ticker?s.ticker+' · ':'')+s.qty.toLocaleString()+'주</div>'
+      +'</div>'
+      +'<div style="text-align:right;flex-shrink:0;">'
+      +'<div style="font-family:\'Nunito\',sans-serif;font-weight:800;font-size:14px;">'+amtDisplay+'</div>'
+      +'<div style="font-size:11px;color:var(--muted);margin-top:2px;">비중 '+pct+'%</div>'
+      +'</div></div>';
   };
 
   document.getElementById('modalKrList').innerHTML = krStocks.length>0
