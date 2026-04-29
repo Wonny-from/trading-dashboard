@@ -947,39 +947,36 @@ function render(etfRows, depRows, tradeRows, cashRows, historyRows, divRows) {
 
   // ── ETF 테이블 ──
   document.getElementById('etfCount').textContent = etfData.filter(r=>r.qty>0).length+'종목';
-  document.getElementById('etfTableWrap').innerHTML = `
-  <table class="etf-table">
-    <thead><tr>
-      <th>종목</th><th>수량</th><th>현재가</th><th>평가금</th><th>손익</th><th>월배당</th>
-    </tr></thead>
-    <tbody>
-    \${etfData.map(r=>{
+  document.getElementById('etfTableWrap').innerHTML = (function(){
+    const rows = etfData.map(r => {
       const color = ETF_COLORS[r.name]||'#7c5ce4';
       const short = ETF_SHORT[r.name]||r.name;
       const pCls  = r.pnl>0?'pnl-pos':r.pnl<0?'pnl-neg':'pnl-neu';
       const pSign = r.pnl>=0?'+':'';
       const md    = r.qty * r.divPer;
       const pct   = r.invested>0?(r.pnl/r.invested*100):0;
-      return \`<tr>
-        <td><div class="etf-name-cell">
-          <div class="etf-color-bar" style="background:\${color};"></div>
-          <div><div class="etf-name-text">\${short}</div><div class="etf-code">\${r.name}</div></div>
-        </div></td>
-        <td>\${r.qty.toLocaleString()}</td>
-        <td>\${fmt(r.price)}</td>
-        <td style="font-weight:700;">\${fmt(r.eval)}</td>
-        <td><span class="pnl-badge \${pCls}">\${pSign}\${fmt(r.pnl)} (\${pSign}\${pct.toFixed(1)}%)</span></td>
-        <td style="color:var(--green);font-weight:700;">\${md>0?fmt(md)+'원':'—'}</td>
-      </tr>\`;
-    }).join('')}
-    <tr class="etf-total-row">
-      <td colspan="3">합계</td>
-      <td>\${fmt(totalEtfEval)}</td>
-      <td><span class="pnl-badge \${totalEtfPnl>=0?'pnl-pos':'pnl-neg'}">\${fmtW(totalEtfPnl)} (\${fmtP(pnlPct)})</span></td>
-      <td style="color:var(--green);">\${fmt(monthlyDiv)}원</td>
-    </tr>
-    </tbody>
-  </table>\`;
+      return '<tr>'
+        +'<td><div class="etf-name-cell">'
+        +'<div class="etf-color-bar" style="background:'+color+';"></div>'
+        +'<div><div class="etf-name-text">'+short+'</div><div class="etf-code">'+r.name+'</div></div>'
+        +'</div></td>'
+        +'<td>'+r.qty.toLocaleString()+'</td>'
+        +'<td>'+fmt(r.price)+'</td>'
+        +'<td style="font-weight:700;">'+fmt(r.eval)+'</td>'
+        +'<td><span class="pnl-badge '+pCls+'">'+pSign+fmt(r.pnl)+' ('+pSign+pct.toFixed(1)+'%)</span></td>'
+        +'<td style="color:var(--green);font-weight:700;">'+(md>0?fmt(md)+'원':'—')+'</td>'
+        +'</tr>';
+    }).join('');
+    return '<table class="etf-table">'
+      +'<thead><tr><th>종목</th><th>수량</th><th>현재가</th><th>평가금</th><th>손익</th><th>월배당</th></tr></thead>'
+      +'<tbody>'+rows
+      +'<tr class="etf-total-row">'
+      +'<td colspan="3">합계</td>'
+      +'<td>'+fmt(totalEtfEval)+'</td>'
+      +'<td><span class="pnl-badge '+(totalEtfPnl>=0?'pnl-pos':'pnl-neg')+'">'+fmtW(totalEtfPnl)+' ('+fmtP(pnlPct)+')</span></td>'
+      +'<td style="color:var(--green);">'+fmt(monthlyDiv)+'원</td>'
+      +'</tr></tbody></table>';
+  })();
 
   // ── 도넛 ──
   const dData = [
