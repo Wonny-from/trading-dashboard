@@ -516,7 +516,7 @@ body {
       <div class="nav-label">메뉴</div>
       <div class="nav-item active"><span class="nav-icon">📊</span>통합 대시보드</div>
       <div class="nav-label">자산</div>
-      <div class="nav-item"><span class="nav-icon">📈</span>ETF 현황</div>
+      <div class="nav-item" onclick="openEtfModal()"><span class="nav-icon">📈</span>ETF 현황</div>
       <div class="nav-item" onclick="openStockModal()"><span class="nav-icon">💹</span>주식</div>
       <div class="nav-item"><span class="nav-icon">🏦</span>예적금</div>
       <div class="nav-item"><span class="nav-icon">💵</span>현금</div>
@@ -627,6 +627,15 @@ body {
       <!-- ETF 테이블 + 도넛 -->
       <div class="main-grid">
         <div class="card">
+          <div class="card-title">
+            ETF 보유 현황
+            <span class="card-badge" id="etfCount">0종목</span>
+          </div>
+          <div id="etfTableWrap">
+            <div class="loading"><div class="spinner"></div>불러오는 중...</div>
+          </div>
+        </div>
+        <div class="card">
           <div class="card-title">자산 구성</div>
           <div class="donut-wrap">
             <canvas id="donutChart" role="img" aria-label="전체 자산 구성 도넛 차트">자산 구성</canvas>
@@ -694,6 +703,90 @@ let assetChart = null;
 let g_holding = [];
 let g_sold = [];
 let g_usdRate = 1480;
+
+// ── ETF 모달 ──────────────────────────────────────────
+let g_etfData = [];
+let g_divRows = [];
+
+function openEtfModal() {
+  const totalEval = g_etfData.reduce((s,r)=>s+r.eval,0);
+  const totalPnl  = g_etfData.reduce((s,r)=>s+r.pnl,0);
+  const totalDiv  = g_divRows.reduce((s,r)=>s+(Number(String(r['세후배당금']||0).replace(/,/g,''))||0),0);
+
+  document.getElementById('etfModalEval').textContent = fmt(totalEval)+'원';
+  const pEl = document.getElementById('etfModalPnl');
+  pEl.textContent = fmtW(totalPnl)+'원';
+  pEl.style.color = totalPnl>=0?'#00e5b3':'#ff5b5b';
+  document.getElementById('etfModalDiv').textContent = fmt(totalDiv)+'원';
+
+  const ETF_COLORS_LIST = ['#7c5ce4','#ff8c42','#4f8eff','#00c897','#ff4d8d'];
+  document.getElementById('etfModalList').innerHTML = g_etfData.map((r,i) => {
+    const color = ETF_COLORS[r.name] || ETF_COLORS_LIST[i % ETF_COLORS_LIST.length];
+    const pct   = r.invested>0?(r.pnl/r.invested*100):0;
+    const pCls  = r.pnl>=0?'color:#00c897':'color:#ff5b5b';
+    const md    = r.qty * r.divPer;
+    return `
+    <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--bg);border-radius:14px;border:1px solid var(--border);margin-bottom:8px;">
+      <div style="width:10px;height:42px;border-radius:4px;background:${color};flex-shrink:0;"></div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:700;font-size:13px;color:var(--text);">${ETF_SHORT[r.name]||r.name}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;">${r.qty.toLocaleString()}좌 · 현재가 ${fmt(r.price)}원</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0;">
+        <div style="font-family:'Nunito',sans-serif;font-weight:800;font-size:14px;">${fmt(r.eval)}원</div>
+        <div style="font-size:11px;${pCls};margin-top:2px;">${fmtW(r.pnl)}원 (${pct>=0?'+':''}${pct.toFixed(1)}%)</div>
+        ${md>0?`<div style="font-size:10px;color:var(--green);margin-top:1px;">월배당 ${fmt(md)}원</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+
+  const divData = g_divRows.filter(r=>r['날짜']&&r['종목명']);
+  if(divData.length === 0) {
+    document.getElementById('etfModalDivList').innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px 0;font-size:13px;">아직 수령한 배당금이 없어요</div>';
+  } else {
+    const byMonth = {};
+    divData.forEach(r => {
+      const mon = String(r['날짜']).slice(0,7);
+      if(!byMonth[mon]) byMonth[mon] = {post:0,items:[]};
+      byMonth[mon].post += Number(String(r['세후배당금']||0).replace(/,/g,''))||0;
+      byMonth[mon].items.push(r);
+    });
+    const months = Object.keys(byMonth).sort().reverse();
+    const MO = ['','1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+    document.getElementById('etfModalDivList').innerHTML = months.map(mon => {
+      const m = byMonth[mon];
+      const [y,mo] = mon.split('-');
+      return `
+      <div style="margin-bottom:12px;border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--bg);">
+          <div style="font-size:13px;font-weight:700;color:var(--text);">${y}년 ${MO[parseInt(mo)]}</div>
+          <div style="font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;color:var(--green);">+${fmt(m.post)}원</div>
+        </div>
+        <div style="padding:8px 16px;">
+          ${m.items.map(r=>`
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">
+            <div>
+              <div style="font-size:12px;font-weight:700;color:var(--text);">${r['종목명']}</div>
+              <div style="font-size:11px;color:var(--muted);">${r['날짜']} · ${r['수량']}좌 × ${r['좌당분배금']}원</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:13px;font-weight:800;color:var(--green);">+${fmt(Number(String(r['세후배당금']||0).replace(/,/g,'')))}원</div>
+            </div>
+          </div>`).join('')}
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  document.getElementById('etfModal').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeEtfModal(e) {
+  if(e && e.target !== document.getElementById('etfModal')) return;
+  document.getElementById('etfModal').style.display = 'none';
+  document.body.style.overflow = '';
+}
 
 // ── 주식 모달 ──────────────────────────────────────────
 function openStockModal() {
@@ -852,7 +945,41 @@ function render(etfRows, depRows, tradeRows, cashRows, historyRows, divRows) {
   bPnl.textContent = fmtP(pnlPct);
   document.getElementById('bPnlSub').textContent = `${fmtW(totalEtfPnl)}원 손익`;
 
-  // ETF 테이블은 ETF 모달에서 표시
+  // ── ETF 테이블 ──
+  document.getElementById('etfCount').textContent = etfData.filter(r=>r.qty>0).length+'종목';
+  document.getElementById('etfTableWrap').innerHTML = `
+  <table class="etf-table">
+    <thead><tr>
+      <th>종목</th><th>수량</th><th>현재가</th><th>평가금</th><th>손익</th><th>월배당</th>
+    </tr></thead>
+    <tbody>
+    \${etfData.map(r=>{
+      const color = ETF_COLORS[r.name]||'#7c5ce4';
+      const short = ETF_SHORT[r.name]||r.name;
+      const pCls  = r.pnl>0?'pnl-pos':r.pnl<0?'pnl-neg':'pnl-neu';
+      const pSign = r.pnl>=0?'+':'';
+      const md    = r.qty * r.divPer;
+      const pct   = r.invested>0?(r.pnl/r.invested*100):0;
+      return \`<tr>
+        <td><div class="etf-name-cell">
+          <div class="etf-color-bar" style="background:\${color};"></div>
+          <div><div class="etf-name-text">\${short}</div><div class="etf-code">\${r.name}</div></div>
+        </div></td>
+        <td>\${r.qty.toLocaleString()}</td>
+        <td>\${fmt(r.price)}</td>
+        <td style="font-weight:700;">\${fmt(r.eval)}</td>
+        <td><span class="pnl-badge \${pCls}">\${pSign}\${fmt(r.pnl)} (\${pSign}\${pct.toFixed(1)}%)</span></td>
+        <td style="color:var(--green);font-weight:700;">\${md>0?fmt(md)+'원':'—'}</td>
+      </tr>\`;
+    }).join('')}
+    <tr class="etf-total-row">
+      <td colspan="3">합계</td>
+      <td>\${fmt(totalEtfEval)}</td>
+      <td><span class="pnl-badge \${totalEtfPnl>=0?'pnl-pos':'pnl-neg'}">\${fmtW(totalEtfPnl)} (\${fmtP(pnlPct)})</span></td>
+      <td style="color:var(--green);">\${fmt(monthlyDiv)}원</td>
+    </tr>
+    </tbody>
+  </table>\`;
 
   // ── 도넛 ──
   const dData = [
@@ -870,7 +997,7 @@ function render(etfRows, depRows, tradeRows, cashRows, historyRows, divRows) {
       datasets:[{data:dData.map(d=>d.val),backgroundColor:dData.map(d=>d.color),borderWidth:3,borderColor:'#fff',hoverOffset:10}]
     },
     options:{responsive:true,maintainAspectRatio:false,cutout:'70%',
-      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${fmt(ctx.raw)}원 (${(ctx.raw/grandTotal*100).toFixed(1)}%)`}}}
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>ctx.label+': '+fmt(ctx.raw)+'원 ('+((ctx.raw/grandTotal*100).toFixed(1))+'%)'}}}
     }
   });
   document.getElementById('donutLegend').innerHTML = dData.map(d=>`
@@ -1001,6 +1128,42 @@ async function run() {
 
 run();
 </script>
+
+<!-- ETF 모달 -->
+<div id="etfModal" onclick="closeEtfModal(event)" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:999;background:rgba(26,31,54,0.5);backdrop-filter:blur(4px);">
+  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:90%;max-width:680px;max-height:85vh;background:var(--white);border-radius:24px;box-shadow:0 20px 60px rgba(0,0,0,0.2);overflow:hidden;display:flex;flex-direction:column;">
+    <div style="background:var(--grad-blue);padding:22px 26px;color:white;flex-shrink:0;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <div>
+          <div style="font-size:10px;font-weight:700;opacity:0.8;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:3px;">ETF PORTFOLIO</div>
+          <div style="font-family:'Nunito',sans-serif;font-size:18px;font-weight:800;">ETF 보유 현황</div>
+        </div>
+        <button onclick="document.getElementById('etfModal').style.display='none';document.body.style.overflow='';" style="background:rgba(255,255,255,0.2);border:none;color:white;width:34px;height:34px;border-radius:50%;font-size:16px;cursor:pointer;line-height:1;">&#x2715;</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+        <div style="background:rgba(255,255,255,0.15);border-radius:12px;padding:11px 14px;backdrop-filter:blur(4px);">
+          <div style="font-size:10px;opacity:0.8;margin-bottom:4px;">총 평가금</div>
+          <div style="font-family:'Nunito',sans-serif;font-size:15px;font-weight:800;" id="etfModalEval">&#x2014;</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.15);border-radius:12px;padding:11px 14px;backdrop-filter:blur(4px);">
+          <div style="font-size:10px;opacity:0.8;margin-bottom:4px;">총 손익</div>
+          <div style="font-family:'Nunito',sans-serif;font-size:15px;font-weight:800;" id="etfModalPnl">&#x2014;</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.15);border-radius:12px;padding:11px 14px;backdrop-filter:blur(4px);">
+          <div style="font-size:10px;opacity:0.8;margin-bottom:4px;">누적 배당금</div>
+          <div style="font-family:'Nunito',sans-serif;font-size:15px;font-weight:800;" id="etfModalDiv">&#x2014;</div>
+        </div>
+      </div>
+    </div>
+    <div style="overflow-y:auto;padding:20px 24px;flex:1;">
+      <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:12px;">&#x1F4C8; 보유 ETF</div>
+      <div id="etfModalList" style="margin-bottom:24px;"></div>
+      <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:12px;">&#x1F4B8; 배당금 수령 내역</div>
+      <div id="etfModalDivList"></div>
+    </div>
+  </div>
+</div>
+
 <!-- 주식 보유 팝업 모달 -->
 <div id="stockModal" onclick="closeStockModal(event)" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:999;background:rgba(26,31,54,0.5);backdrop-filter:blur(4px);">
   <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:90%;max-width:580px;max-height:82vh;background:var(--white);border-radius:24px;box-shadow:0 20px 60px rgba(0,0,0,0.2);overflow:hidden;display:flex;flex-direction:column;">
