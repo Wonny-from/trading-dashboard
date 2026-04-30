@@ -1,38 +1,6 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<script>
-(function() {
-  const PASS = "9698";
-  const KEY = "wonny_auth";
-  if (sessionStorage.getItem(KEY) !== PASS) {
-    document.addEventListener("DOMContentLoaded", function() {
-      const overlay = document.createElement("div");
-      overlay.id = "auth-overlay";
-      overlay.style.cssText = "position:fixed;inset:0;background:#1a1f36;display:flex;align-items:center;justify-content:center;z-index:99999;";
-      overlay.innerHTML = `
-        <div style="background:#fff;border-radius:20px;padding:48px 40px;text-align:center;min-width:320px;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
-          <div style="font-size:32px;margin-bottom:12px;">🔒</div>
-          <div style="font-size:20px;font-weight:800;color:#1a1f36;margin-bottom:6px;">WONNY Dashboard</div>
-          <div style="font-size:13px;color:#8892b0;margin-bottom:28px;">비밀번호를 입력하세요</div>
-          <input id="pw-input" type="password" placeholder="비밀번호"
-            style="width:100%;padding:12px 16px;border:2px solid #e8ecf4;border-radius:12px;font-size:16px;outline:none;box-sizing:border-box;text-align:center;letter-spacing:4px;"
-            onkeydown="if(event.key==='Enter')document.getElementById('pw-btn').click()">
-          <div id="pw-error" style="color:#ff4d8d;font-size:12px;height:18px;margin-top:8px;"></div>
-          <button id="pw-btn"
-            style="width:100%;margin-top:8px;padding:13px;background:linear-gradient(135deg,#7c5cfc,#a78bfa);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;"
-            onclick="(function(){
-              const v=document.getElementById('pw-input').value;
-              if(v==='${PASS}'){sessionStorage.setItem('${KEY}','${PASS}');document.getElementById('auth-overlay').remove();}
-              else{document.getElementById('pw-error').textContent='비밀번호가 틀렸어요 😅';document.getElementById('pw-input').value='';document.getElementById('pw-input').focus();}
-            })()">확인</button>
-        </div>`;
-      document.body.prepend(overlay);
-      setTimeout(() => document.getElementById("pw-input").focus(), 50);
-    });
-  }
-})();
-</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>WONNY Portfolio Insight</title>
@@ -56,7 +24,7 @@
   .refresh-btn:hover { background: #0052cc; }
 
   /* 메트릭 카드 */
-  .metric-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 1.5rem; }
+  .metric-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 1.5rem; }
   .metric { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px 18px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); transition: box-shadow 0.15s; }
   .metric:hover { box-shadow: 0 4px 12px rgba(0,102,255,0.08); }
   .metric.highlight { border-color: #0066ff; border-width: 1.5px; }
@@ -151,6 +119,23 @@
     <div class="metric-value" id="m-win">—</div>
     <div class="metric-sub" id="m-winsub"></div>
   </div>
+  <div class="metric">
+    <div class="metric-label">손익비</div>
+    <div class="metric-value" id="m-rr">—</div>
+    <div class="metric-sub" id="m-rrsub"></div>
+  </div>
+</div>
+
+<!-- 손익 분석 -->
+<div class="charts-row" id="pnl-analysis-section" style="margin-bottom:1.5rem;">
+  <div class="card">
+    <div class="card-title">종목별 합산 손익</div>
+    <div style="position:relative;height:220px;"><canvas id="pnlBarChart"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-title">수익률 분포</div>
+    <div style="position:relative;height:220px;"><canvas id="pnlDistChart"></canvas></div>
+  </div>
 </div>
 
 <div class="charts-row">
@@ -208,10 +193,8 @@ function toggleMonth(id) {
 function buildAccordion(rows) {
   const tableMap = {};
   [...rows].reverse().forEach(r => {
-    const isHold = String(r['상태']||'').includes('보유');
-    const mon = isHold ? (r['매수일']||'').slice(0,7) : (r['매도일']||'').slice(0,7);
-    const isHoldRow = String(r['상태']||'').includes('보유');
-    const key = r['종목']+'|'+(r['시장']||'')+'|'+(isHoldRow?'보유중':(r['매도일']||''));
+    const mon = (r['매수일']||'').slice(0,7);
+    const key = r['종목']+'|'+(r['시장']||'')+'|'+(r['상태']||'')+'|'+mon;
     if (!tableMap[key]) {
       tableMap[key] = {
         종목: r['종목'], 시장: r['시장']||'', 상태: String(r['상태']||''),
@@ -310,8 +293,7 @@ function render(rows, cashKRW, cashUSD, usdRate) {
 
   const soldByName = {};
   sold.forEach(r => {
-    // 종목+시장+매도일 기준으로 묶기 (여러 번 단타도 정확히 구분)
-    const n = r['종목']+'|'+(r['시장']||'')+'|'+(r['매도일']||'');
+    const n = r['종목'];
     if (!soldByName[n]) soldByName[n] = { pnl:0, buyAmt:0 };
     soldByName[n].pnl    += nv(r['손익(원)'])||0;
     soldByName[n].buyAmt += nv(r['매수금액(원)'])||0;
@@ -320,9 +302,7 @@ function render(rows, cashKRW, cashUSD, usdRate) {
   const totalPnl = sg.reduce((s,r)=>s+r.pnl,0);
   const winners  = sg.filter(r=>r.pnl>0);
   const losers   = sg.filter(r=>r.pnl<0);
-  // 투입금액 가중평균 수익률
-  const totalBuyAmt = sg.reduce((s,r)=>s+r.buyAmt,0);
-  const pct = totalBuyAmt>0 ? sg.reduce((s,r)=>s+(r.buyAmt>0?r.pnl/r.buyAmt*100*(r.buyAmt/totalBuyAmt):0),0) : 0;
+  const pct      = sg.length>0 ? totalPnl/sg.reduce((s,r)=>s+r.buyAmt,0)*100 : 0;
 
   const hbn = {};
   holding.forEach(r => {
@@ -348,7 +328,7 @@ function render(rows, cashKRW, cashUSD, usdRate) {
   const pEl = document.getElementById('m-pnl');
   pEl.textContent = fmtW(totalPnl);
   pEl.className = 'metric-value '+(totalPnl>=0?'pos':'neg');
-  document.getElementById('m-pct').textContent = fmtP(pct)+' 가중평균';
+  document.getElementById('m-pct').textContent = fmtP(pct)+' 전체';
   document.getElementById('m-win').textContent = sg.length>0?(winners.length/sg.length*100).toFixed(1)+'%':'—';
   document.getElementById('m-winsub').textContent = `${winners.length}승 ${losers.length}패`;
 
@@ -395,6 +375,83 @@ function render(rows, cashKRW, cashUSD, usdRate) {
       plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${Math.round(ctx.raw).toLocaleString()}원`}}}
     }
   });
+
+  // ── 손익비 계산 ──
+  const avgWin  = winners.length > 0 ? winners.reduce((s,r)=>s+r.pnl,0) / winners.length : 0;
+  const avgLoss = losers.length  > 0 ? Math.abs(losers.reduce((s,r)=>s+r.pnl,0) / losers.length) : 0;
+  const rr      = avgLoss > 0 ? avgWin / avgLoss : 0;
+  document.getElementById('m-rr').textContent = avgLoss > 0 ? '1 : ' + rr.toFixed(1) : '—';
+  document.getElementById('m-rrsub').textContent = avgLoss > 0
+    ? `평균 +${Math.round(avgWin).toLocaleString()}원 / -${Math.round(avgLoss).toLocaleString()}원` : '';
+
+  // ── 손익 분석 차트 (종목+매도일 기준 합산) ──
+  const pnlBarEl   = document.getElementById('pnlBarChart');
+  const pnlDistEl  = document.getElementById('pnlDistChart');
+  if (sg.length > 0 && pnlBarEl && pnlDistEl) {
+    // 바 차트
+    const sgSorted = [...sg].sort((a,b) => b.pnl - a.pnl);
+    // 종목명 추출 (key: 종목|시장|매도일)
+    const getLabel = key => key.split('|')[0];
+    const sgKeys   = Object.keys(soldByName);
+    const sgWithKey = sgKeys.map(k => ({key:k, ...soldByName[k]})).sort((a,b)=>b.pnl-a.pnl);
+
+    if (window._pnlBarChart) window._pnlBarChart.destroy();
+    window._pnlBarChart = new Chart(pnlBarEl, {
+      type: 'bar',
+      data: {
+        labels: sgWithKey.map(r => getLabel(r.key)),
+        datasets: [{
+          data: sgWithKey.map(r => r.pnl),
+          backgroundColor: sgWithKey.map(r => r.pnl >= 0 ? 'rgba(22,163,74,0.8)' : 'rgba(220,38,38,0.8)'),
+          borderRadius: 4,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { callbacks: {
+          label: ctx => (ctx.raw >= 0 ? '+' : '') + Math.round(ctx.raw).toLocaleString('ko-KR') + '원'
+        }}},
+        scales: {
+          x: { ticks: { font: { size: 9 }, maxRotation: 45, autoSkip: false, color: '#94a3b8' }, grid: { display: false } },
+          y: { ticks: { font: { size: 9 }, color: '#94a3b8', callback: v => (v/10000).toFixed(0)+'만' }, grid: { color: '#f1f5f9' } }
+        }
+      }
+    });
+
+    // 분포 차트
+    const rates = sgWithKey.map(r => r.buyAmt > 0 ? r.pnl / r.buyAmt * 100 : 0);
+    const bins  = ['<-3%','-3~0%','0~1%','1~5%','5~10%','>10%'];
+    const counts = [0,0,0,0,0,0];
+    rates.forEach(r => {
+      if (r < -3) counts[0]++;
+      else if (r < 0) counts[1]++;
+      else if (r < 1) counts[2]++;
+      else if (r < 5) counts[3]++;
+      else if (r < 10) counts[4]++;
+      else counts[5]++;
+    });
+
+    if (window._pnlDistChart) window._pnlDistChart.destroy();
+    window._pnlDistChart = new Chart(pnlDistEl, {
+      type: 'bar',
+      data: {
+        labels: bins,
+        datasets: [{
+          data: counts,
+          backgroundColor: ['#dc2626','#f87171','#cbd5e1','#86efac','#22c55e','#15803d'],
+          borderRadius: 4,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ctx.raw + '건' }}},
+        scales: {
+          x: { ticks: { font: { size: 11 }, color: '#94a3b8' }, grid: { display: false } },
+          y: { ticks: { stepSize: 1, font: { size: 10 }, color: '#94a3b8' }, grid: { color: '#f1f5f9' } }
+        }
+      }
+    });
+  }
 
   buildAccordion(rows);
 }
