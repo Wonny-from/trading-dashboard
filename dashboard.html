@@ -299,7 +299,8 @@ function render(rows, cashKRW, cashUSD, usdRate) {
   const holding = rows.filter(r => String(r['상태']||'').includes('보유'));
   const sold    = rows.filter(r => String(r['상태']||'').includes('매도'));
 
-  const soldByName = {};
+  window.soldByName = {};
+  const soldByName = window.soldByName;
   sold.forEach(r => {
     const n = r['종목'];
     if (!soldByName[n]) soldByName[n] = { pnl:0, buyAmt:0 };
