@@ -302,7 +302,7 @@ function render(rows, cashKRW, cashUSD, usdRate) {
   window.soldByName = {};
   const soldByName = window.soldByName;
   sold.forEach(r => {
-    const n = r['종목'];
+    const n = r['종목']+'|'+(r['시장']||'')+'|'+(r['매도일']||'');
     if (!soldByName[n]) soldByName[n] = { pnl:0, buyAmt:0 };
     soldByName[n].pnl    += nv(r['손익(원)'])||0;
     soldByName[n].buyAmt += nv(r['매수금액(원)'])||0;
