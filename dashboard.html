@@ -393,15 +393,20 @@ function render(rows, cashKRW, cashUSD, usdRate) {
   document.getElementById('m-rrsub').textContent = avgLoss > 0
     ? `평균 +${Math.round(avgWin).toLocaleString()}원 / -${Math.round(avgLoss).toLocaleString()}원` : '';
 
-  // ── 손익 분석 차트 (종목+매도일 기준 합산) ──
+ // ── 손익 분석 차트 (종목|시장 기준 합산) ──
   const pnlBarEl   = document.getElementById('pnlBarChart');
   if (sg.length > 0 && pnlBarEl) {
-    // 바 차트
-    const sgSorted = [...sg].sort((a,b) => b.pnl - a.pnl);
-    // 종목명 추출 (key: 종목|시장|매도일)
+    // 종목|시장 기준으로 재집계 (매도일 무시하고 합산)
+    const byName = {};
+    sold.forEach(r => {
+      const key = r['종목'] + '|' + (r['시장']||'');
+      if (!byName[key]) byName[key] = { pnl: 0, buyAmt: 0 };
+      byName[key].pnl    += nv(r['손익(원)']) || 0;
+      byName[key].buyAmt += nv(r['매수금액(원)']) || 0;
+    });
     const getLabel = key => key.split('|')[0];
-    const sgKeys   = Object.keys(soldByName);
-    const sgWithKey = sgKeys.map(k => ({key:k, ...soldByName[k]})).sort((a,b)=>b.pnl-a.pnl);
+    const sgKeys   = Object.keys(byName);
+    const sgWithKey = sgKeys.map(k => ({key:k, ...byName[k]})).sort((a,b)=>b.pnl-a.pnl);
 
     // 상위 5개 + 하위 5개만 표시
     const topWins   = sgWithKey.filter(r=>r.pnl>0).slice(0,5);
