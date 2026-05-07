@@ -12,18 +12,15 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif; background: #f0f4ff; color: #1e293b; padding: 2rem; min-height: 100vh; }
 
-  /* 헤더 */
   .header { margin-bottom: 1.5rem; }
   h1 { font-family: 'Inter', sans-serif; font-size: 22px; font-weight: 700; color: #0f172a; letter-spacing: -0.02em; margin-bottom: 3px; }
   .subtitle { font-size: 12px; color: #94a3b8; }
 
-  /* 상태바 */
   .status-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 1.5rem; padding: 10px 16px; background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 12px; color: #64748b; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
   .status-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
   .refresh-btn { margin-left: auto; background: #0066ff; border: none; color: #fff; padding: 5px 14px; border-radius: 6px; font-size: 11px; cursor: pointer; font-weight: 500; transition: background 0.15s; }
   .refresh-btn:hover { background: #0052cc; }
 
-  /* 메트릭 카드 */
   .metric-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 1.5rem; }
   .metric { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px 18px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); transition: box-shadow 0.15s; }
   .metric:hover { box-shadow: 0 4px 12px rgba(0,102,255,0.08); }
@@ -33,7 +30,6 @@
   .metric-sub { font-size: 11px; color: #94a3b8; margin-top: 5px; }
   .pos { color: #16a34a !important; } .neg { color: #dc2626 !important; }
 
-  /* 차트 영역 */
   .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1.5rem; }
   .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
   .card-full { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
@@ -42,7 +38,6 @@
   .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #64748b; }
   .legend-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
 
-  /* 테이블 */
   .tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
   .tbl th { font-size: 10px; font-weight: 600; color: #94a3b8; text-align: left; padding: 8px 12px; border-bottom: 1px solid #f1f5f9; letter-spacing: 0.05em; text-transform: uppercase; background: #f8fafc; }
   .tbl th:first-child { border-radius: 8px 0 0 0; }
@@ -52,14 +47,12 @@
   .tbl tbody tr:hover { background: #f8faff; }
   .tbl .name { color: #0f172a; font-weight: 600; font-family: 'Pretendard', sans-serif; }
 
-  /* 배지 */
   .badge { display: inline-flex; align-items: center; justify-content: center; font-size: 14px; padding: 2px 6px; border-radius: 6px; }
   .badge-kr { background: #fff0f3; }
   .badge-us { background: #eff6ff; }
   .badge-hold { background: #f0fdf4; color: #16a34a; font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 20px; font-family: 'Pretendard', sans-serif; }
   .badge-sold { background: #f8fafc; color: #94a3b8; font-size: 10px; font-weight: 500; padding: 2px 8px; border-radius: 20px; font-family: 'Pretendard', sans-serif; }
 
-  /* 아코디언 */
   .month-group { margin-bottom: 8px; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; }
   .month-header { display: flex; align-items: center; justify-content: space-between; padding: 13px 16px; cursor: pointer; background: #f8fafc; transition: background 0.15s; user-select: none; }
   .month-header:hover { background: #f0f4ff; }
@@ -201,8 +194,16 @@ function toggleMonth(id) {
 function buildAccordion(rows) {
   const tableMap = {};
   [...rows].reverse().forEach(r => {
-    const mon = (r['매수일']||'').slice(0,7);
-    const key = r['종목']+'|'+(r['시장']||'')+'|'+(r['상태']||'')+'|'+mon;
+    const isSold = String(r['상태']||'').includes('매도');
+
+    // ✅ FIX 1: 매도완료는 매도일 기준 월, 보유중은 매수일 기준 월
+    const mon = isSold
+      ? (r['매도일']||r['매수일']||'').slice(0,7)
+      : (r['매수일']||'').slice(0,7);
+
+    // ✅ FIX 2: 매도일을 key에 포함해서 같은 종목 다른 매도일은 별개 행으로
+    const key = r['종목']+'|'+(r['시장']||'')+'|'+(r['상태']||'')+'|'+mon+'|'+(r['매도일']||'');
+
     if (!tableMap[key]) {
       tableMap[key] = {
         종목: r['종목'], 시장: r['시장']||'', 상태: String(r['상태']||''),
@@ -299,15 +300,16 @@ function render(rows, cashKRW, cashUSD, usdRate) {
   const holding = rows.filter(r => String(r['상태']||'').includes('보유'));
   const sold    = rows.filter(r => String(r['상태']||'').includes('매도'));
 
-  window.soldByName = {};
-  const soldByName = window.soldByName;
+  // ✅ FIX 3: 손익 분석 차트 - 종목|시장 기준으로 합산 (매도일 무시)
+  const byName = {};
   sold.forEach(r => {
-    const n = r['종목']+'|'+(r['시장']||'')+'|'+(r['매도일']||'');
-    if (!soldByName[n]) soldByName[n] = { pnl:0, buyAmt:0 };
-    soldByName[n].pnl    += nv(r['손익(원)'])||0;
-    soldByName[n].buyAmt += nv(r['매수금액(원)'])||0;
+    const key = r['종목'] + '|' + (r['시장']||'');
+    if (!byName[key]) byName[key] = { pnl: 0, buyAmt: 0 };
+    byName[key].pnl    += nv(r['손익(원)']) || 0;
+    byName[key].buyAmt += nv(r['매수금액(원)']) || 0;
   });
-  const sg = Object.values(soldByName);
+
+  const sg = Object.values(byName);
   const totalPnl = sg.reduce((s,r)=>s+r.pnl,0);
   const winners  = sg.filter(r=>r.pnl>0);
   const losers   = sg.filter(r=>r.pnl<0);
@@ -341,7 +343,7 @@ function render(rows, cashKRW, cashUSD, usdRate) {
   document.getElementById('m-win').textContent = sg.length>0?(winners.length/sg.length*100).toFixed(1)+'%':'—';
   document.getElementById('m-winsub').textContent = `${winners.length}승 ${losers.length}패`;
 
-  // 바 차트
+  // 보유 종목 바 차트
   const hm = {};
   holding.forEach(r => {
     const key=r['종목']+'|'+(r['시장']||'');
@@ -385,7 +387,7 @@ function render(rows, cashKRW, cashUSD, usdRate) {
     }
   });
 
-  // ── 손익비 계산 ──
+  // 손익비 계산
   const avgWin  = winners.length > 0 ? winners.reduce((s,r)=>s+r.pnl,0) / winners.length : 0;
   const avgLoss = losers.length  > 0 ? Math.abs(losers.reduce((s,r)=>s+r.pnl,0) / losers.length) : 0;
   const rr      = avgLoss > 0 ? avgWin / avgLoss : 0;
@@ -393,22 +395,13 @@ function render(rows, cashKRW, cashUSD, usdRate) {
   document.getElementById('m-rrsub').textContent = avgLoss > 0
     ? `평균 +${Math.round(avgWin).toLocaleString()}원 / -${Math.round(avgLoss).toLocaleString()}원` : '';
 
- // ── 손익 분석 차트 (종목|시장 기준 합산) ──
-  const pnlBarEl   = document.getElementById('pnlBarChart');
+  // 손익 분석 차트
+  const pnlBarEl = document.getElementById('pnlBarChart');
   if (sg.length > 0 && pnlBarEl) {
-    // 종목|시장 기준으로 재집계 (매도일 무시하고 합산)
-    const byName = {};
-    sold.forEach(r => {
-      const key = r['종목'] + '|' + (r['시장']||'');
-      if (!byName[key]) byName[key] = { pnl: 0, buyAmt: 0 };
-      byName[key].pnl    += nv(r['손익(원)']) || 0;
-      byName[key].buyAmt += nv(r['매수금액(원)']) || 0;
-    });
     const getLabel = key => key.split('|')[0];
     const sgKeys   = Object.keys(byName);
     const sgWithKey = sgKeys.map(k => ({key:k, ...byName[k]})).sort((a,b)=>b.pnl-a.pnl);
 
-    // 상위 5개 + 하위 5개만 표시
     const topWins   = sgWithKey.filter(r=>r.pnl>0).slice(0,5);
     const topLosses = sgWithKey.filter(r=>r.pnl<0).slice(-5).reverse();
     const topItems  = [...topWins, ...topLosses];
@@ -436,7 +429,6 @@ function render(rows, cashKRW, cashUSD, usdRate) {
       }
     });
 
-    // 평균 수익/손실 카드 업데이트
     const winRates  = sgWithKey.filter(r=>r.pnl>0).map(r=>r.buyAmt>0?r.pnl/r.buyAmt*100:0);
     const lossRates = sgWithKey.filter(r=>r.pnl<0).map(r=>r.buyAmt>0?r.pnl/r.buyAmt*100:0);
     const avgWinRate  = winRates.length>0  ? winRates.reduce((s,v)=>s+v,0)/winRates.length   : 0;
