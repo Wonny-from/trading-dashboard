@@ -34,7 +34,7 @@
   .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
   .card-full { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
   .card-title { font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 14px; letter-spacing: 0.06em; text-transform: uppercase; }
-  .legend-row { display: flex; gap: 14px; margin-bottom: 10px; flex-wrap: wrap; }
+  .legend-row { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
   .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #64748b; }
   .legend-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
 
@@ -195,15 +195,10 @@ function buildAccordion(rows) {
   const tableMap = {};
   [...rows].reverse().forEach(r => {
     const isSold = String(r['상태']||'').includes('매도');
-
-    // ✅ FIX 1: 매도완료는 매도일 기준 월, 보유중은 매수일 기준 월
     const mon = isSold
       ? (r['매도일']||r['매수일']||'').slice(0,7)
       : (r['매수일']||'').slice(0,7);
-
-    // ✅ FIX 2: 매도일을 key에 포함해서 같은 종목 다른 매도일은 별개 행으로
     const key = r['종목']+'|'+(r['시장']||'')+'|'+(r['상태']||'')+'|'+mon+'|'+(r['매도일']||'');
-
     if (!tableMap[key]) {
       tableMap[key] = {
         종목: r['종목'], 시장: r['시장']||'', 상태: String(r['상태']||''),
@@ -300,7 +295,6 @@ function render(rows, cashKRW, cashUSD, usdRate) {
   const holding = rows.filter(r => String(r['상태']||'').includes('보유'));
   const sold    = rows.filter(r => String(r['상태']||'').includes('매도'));
 
-  // ✅ FIX 3: 손익 분석 차트 - 종목|시장 기준으로 합산 (매도일 무시)
   const byName = {};
   sold.forEach(r => {
     const key = r['종목'] + '|' + (r['시장']||'');
@@ -368,22 +362,55 @@ function render(rows, cashKRW, cashUSD, usdRate) {
     });
   }
 
-  // 도넛 차트
-  const krAmt=holding.filter(r=>r['시장']==='국장').reduce((s,r)=>s+(nv(r['매수금액(원)'])||0),0);
-  const usAmt=holding.filter(r=>r['시장']==='미장').reduce((s,r)=>s+(nv(r['매수금액(원)'])||0),0);
-  const COLORS = ['#0066ff','#94a3b8','#22c55e','#f59e0b'];
-  document.getElementById('mktLegend').innerHTML=[
-    ['국장 주식',krAmt,COLORS[0]],
-    ['미장 주식',usAmt,COLORS[1]],
-    ['원화 현금',cashKRW,COLORS[2]],
-    ['달러 현금',cashUSDinKRW,COLORS[3]],
-  ].map(([l,a,c])=>`<div class="legend-item"><div class="legend-dot" style="background:${c};"></div>${l} ${totalAssets>0?(a/totalAssets*100).toFixed(1):0}%</div>`).join('');
+  // ✅ 도넛 차트 - 종목별로 쪼개기
+  const STOCK_COLORS = [
+    '#0066ff','#94a3b8','#16a34a','#f59e0b','#dc2626','#8b5cf6',
+    '#0891b2','#db2777','#65a30d','#ea580c','#7c3aed','#0284c7',
+  ];
+
+  const stockItems = Object.entries(hbn).map(([name, v], i) => ({
+    label: name,
+    market: v.market,
+    amt: v.amt,
+    color: STOCK_COLORS[i % STOCK_COLORS.length],
+  }));
+
+  const donutLabels = [...stockItems.map(s=>s.label), '원화 현금', '달러 현금'];
+  const donutData   = [...stockItems.map(s=>s.amt), cashKRW, cashUSDinKRW];
+  const donutColors = [...stockItems.map(s=>s.color), '#22c55e', '#f59e0b'];
+
+  const allLegendItems = [
+    ...stockItems.map(s => ({ label: s.label, amt: s.amt, color: s.color, mkt: s.market==='미장'?'US':'KR' })),
+    { label: '원화 현금', amt: cashKRW,       color: '#22c55e', mkt: '' },
+    { label: '달러 현금', amt: cashUSDinKRW,  color: '#f59e0b', mkt: '' },
+  ];
+
+  document.getElementById('mktLegend').innerHTML = allLegendItems
+    .filter(d => d.amt > 0)
+    .map(d => `
+      <div class="legend-item">
+        <div class="legend-dot" style="background:${d.color};"></div>
+        ${d.label}${d.mkt ? ` <span style="font-size:9px;color:#cbd5e1;">${d.mkt}</span>` : ''}
+        <span style="color:#cbd5e1;margin-left:2px;">${totalAssets>0?(d.amt/totalAssets*100).toFixed(1):0}%</span>
+      </div>`).join('');
+
   if (mChart) mChart.destroy();
   mChart = new Chart(document.getElementById('mktChart'),{
     type:'doughnut',
-    data:{labels:['국장 주식','미장 주식','원화 현금','달러 현금'],datasets:[{data:[krAmt,usAmt,cashKRW,cashUSDinKRW],backgroundColor:COLORS,borderWidth:2,borderColor:'#fff',hoverOffset:6}]},
+    data:{
+      labels: donutLabels,
+      datasets:[{
+        data: donutData,
+        backgroundColor: donutColors,
+        borderWidth:2,
+        borderColor:'#fff',
+        hoverOffset:6
+      }]
+    },
     options:{responsive:true,maintainAspectRatio:false,cutout:'62%',
-      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${Math.round(ctx.raw).toLocaleString()}원`}}}
+      plugins:{legend:{display:false},tooltip:{callbacks:{
+        label:ctx=>` ${ctx.label}: ${Math.round(ctx.raw).toLocaleString()}원 (${totalAssets>0?(ctx.raw/totalAssets*100).toFixed(1):0}%)`
+      }}}
     }
   });
 
