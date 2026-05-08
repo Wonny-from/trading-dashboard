@@ -11,13 +11,16 @@
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif; background: #f0f4ff; color: #1e293b; padding: 2rem; min-height: 100vh; }
+
   .header { margin-bottom: 1.5rem; }
   h1 { font-family: 'Inter', sans-serif; font-size: 22px; font-weight: 700; color: #0f172a; letter-spacing: -0.02em; margin-bottom: 3px; }
   .subtitle { font-size: 12px; color: #94a3b8; }
+
   .status-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 1.5rem; padding: 10px 16px; background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 12px; color: #64748b; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
   .status-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
   .refresh-btn { margin-left: auto; background: #0066ff; border: none; color: #fff; padding: 5px 14px; border-radius: 6px; font-size: 11px; cursor: pointer; font-weight: 500; transition: background 0.15s; }
   .refresh-btn:hover { background: #0052cc; }
+
   .metric-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 1.5rem; }
   .metric { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px 18px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); transition: box-shadow 0.15s; }
   .metric:hover { box-shadow: 0 4px 12px rgba(0,102,255,0.08); }
@@ -26,13 +29,15 @@
   .metric-value { font-family: 'Inter', sans-serif; font-size: 20px; font-weight: 600; color: #0f172a; letter-spacing: -0.02em; }
   .metric-sub { font-size: 11px; color: #94a3b8; margin-top: 5px; }
   .pos { color: #16a34a !important; } .neg { color: #dc2626 !important; }
+
   .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1.5rem; }
   .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
   .card-full { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
   .card-title { font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 14px; letter-spacing: 0.06em; text-transform: uppercase; }
-  .legend-row { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+  .legend-row { display: flex; gap: 14px; margin-bottom: 10px; flex-wrap: wrap; }
   .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #64748b; }
   .legend-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+
   .tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
   .tbl th { font-size: 10px; font-weight: 600; color: #94a3b8; text-align: left; padding: 8px 12px; border-bottom: 1px solid #f1f5f9; letter-spacing: 0.05em; text-transform: uppercase; background: #f8fafc; }
   .tbl th:first-child { border-radius: 8px 0 0 0; }
@@ -41,11 +46,13 @@
   .tbl tr:last-child td { border-bottom: none; }
   .tbl tbody tr:hover { background: #f8faff; }
   .tbl .name { color: #0f172a; font-weight: 600; font-family: 'Pretendard', sans-serif; }
+
   .badge { display: inline-flex; align-items: center; justify-content: center; font-size: 14px; padding: 2px 6px; border-radius: 6px; }
   .badge-kr { background: #fff0f3; }
   .badge-us { background: #eff6ff; }
   .badge-hold { background: #f0fdf4; color: #16a34a; font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 20px; font-family: 'Pretendard', sans-serif; }
   .badge-sold { background: #f8fafc; color: #94a3b8; font-size: 10px; font-weight: 500; padding: 2px 8px; border-radius: 20px; font-family: 'Pretendard', sans-serif; }
+
   .month-group { margin-bottom: 8px; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; }
   .month-header { display: flex; align-items: center; justify-content: space-between; padding: 13px 16px; cursor: pointer; background: #f8fafc; transition: background 0.15s; user-select: none; }
   .month-header:hover { background: #f0f4ff; }
@@ -58,6 +65,7 @@
   .month-arrow.open { transform: rotate(180deg); }
   .month-body { display: none; }
   .month-body.open { display: block; }
+
   @media (max-width: 768px) {
     body { padding: 1rem; }
     .metric-grid { grid-template-columns: repeat(2, 1fr); }
@@ -111,6 +119,7 @@
   </div>
 </div>
 
+<!-- 손익 분석 -->
 <div class="charts-row" id="pnl-analysis-section" style="margin-bottom:1.5rem;">
   <div class="card">
     <div class="card-title">종목별 합산 손익 <span style="font-weight:400;color:#cbd5e1;">(수익 상위 5 · 손실 상위 5)</span></div>
@@ -186,10 +195,15 @@ function buildAccordion(rows) {
   const tableMap = {};
   [...rows].reverse().forEach(r => {
     const isSold = String(r['상태']||'').includes('매도');
+
+    // ✅ FIX 1: 매도완료는 매도일 기준 월, 보유중은 매수일 기준 월
     const mon = isSold
       ? (r['매도일']||r['매수일']||'').slice(0,7)
       : (r['매수일']||'').slice(0,7);
+
+    // ✅ FIX 2: 매도일을 key에 포함해서 같은 종목 다른 매도일은 별개 행으로
     const key = r['종목']+'|'+(r['시장']||'')+'|'+(r['상태']||'')+'|'+mon+'|'+(r['매도일']||'');
+
     if (!tableMap[key]) {
       tableMap[key] = {
         종목: r['종목'], 시장: r['시장']||'', 상태: String(r['상태']||''),
@@ -286,6 +300,7 @@ function render(rows, cashKRW, cashUSD, usdRate) {
   const holding = rows.filter(r => String(r['상태']||'').includes('보유'));
   const sold    = rows.filter(r => String(r['상태']||'').includes('매도'));
 
+  // ✅ FIX 3: 손익 분석 차트 - 종목|시장 기준으로 합산 (매도일 무시)
   const byName = {};
   sold.forEach(r => {
     const key = r['종목'] + '|' + (r['시장']||'');
@@ -328,6 +343,7 @@ function render(rows, cashKRW, cashUSD, usdRate) {
   document.getElementById('m-win').textContent = sg.length>0?(winners.length/sg.length*100).toFixed(1)+'%':'—';
   document.getElementById('m-winsub').textContent = `${winners.length}승 ${losers.length}패`;
 
+  // 보유 종목 바 차트
   const hm = {};
   holding.forEach(r => {
     const key=r['종목']+'|'+(r['시장']||'');
@@ -352,48 +368,26 @@ function render(rows, cashKRW, cashUSD, usdRate) {
     });
   }
 
-  // 도넛 차트 - 종목별
-  const STOCK_COLORS = [
-    '#e63946','#2196f3','#ff9800','#9c27b0','#00bcd4',
-    '#ff5722','#3f51b5','#009688','#f06292','#795548',
-    '#607d8b','#8bc34a',
-  ];
-
-  const stockItems = Object.entries(hbn).map(([name, v], i) => ({
-    label: name, market: v.market, amt: v.amt,
-    color: STOCK_COLORS[i % STOCK_COLORS.length],
-  }));
-
-  const donutLabels = [...stockItems.map(s=>s.label), '원화 현금', '달러 현금'];
-  const donutData   = [...stockItems.map(s=>s.amt), cashKRW, cashUSDinKRW];
-  const donutColors = [...stockItems.map(s=>s.color), '#1b5e20', '#f57f17'];
-
-  const allLegendItems = [
-    ...stockItems.map(s => ({ label: s.label, amt: s.amt, color: s.color, mkt: s.market==='미장'?'US':'KR' })),
-    { label: '원화 현금', amt: cashKRW,      color: '#1b5e20', mkt: '' },
-    { label: '달러 현금', amt: cashUSDinKRW, color: '#f57f17', mkt: '' },
-  ];
-
-  document.getElementById('mktLegend').innerHTML = allLegendItems
-    .filter(d => d.amt > 0)
-    .map(d => `
-      <div class="legend-item">
-        <div class="legend-dot" style="background:${d.color};"></div>
-        ${d.label}${d.mkt ? ` <span style="font-size:9px;color:#cbd5e1;">${d.mkt}</span>` : ''}
-        <span style="color:#cbd5e1;margin-left:2px;">${totalAssets>0?(d.amt/totalAssets*100).toFixed(1):0}%</span>
-      </div>`).join('');
-
+  // 도넛 차트
+  const krAmt=holding.filter(r=>r['시장']==='국장').reduce((s,r)=>s+(nv(r['매수금액(원)'])||0),0);
+  const usAmt=holding.filter(r=>r['시장']==='미장').reduce((s,r)=>s+(nv(r['매수금액(원)'])||0),0);
+  const COLORS = ['#0066ff','#94a3b8','#22c55e','#f59e0b'];
+  document.getElementById('mktLegend').innerHTML=[
+    ['국장 주식',krAmt,COLORS[0]],
+    ['미장 주식',usAmt,COLORS[1]],
+    ['원화 현금',cashKRW,COLORS[2]],
+    ['달러 현금',cashUSDinKRW,COLORS[3]],
+  ].map(([l,a,c])=>`<div class="legend-item"><div class="legend-dot" style="background:${c};"></div>${l} ${totalAssets>0?(a/totalAssets*100).toFixed(1):0}%</div>`).join('');
   if (mChart) mChart.destroy();
   mChart = new Chart(document.getElementById('mktChart'),{
     type:'doughnut',
-    data:{ labels: donutLabels, datasets:[{ data: donutData, backgroundColor: donutColors, borderWidth:2, borderColor:'#fff', hoverOffset:6 }] },
+    data:{labels:['국장 주식','미장 주식','원화 현금','달러 현금'],datasets:[{data:[krAmt,usAmt,cashKRW,cashUSDinKRW],backgroundColor:COLORS,borderWidth:2,borderColor:'#fff',hoverOffset:6}]},
     options:{responsive:true,maintainAspectRatio:false,cutout:'62%',
-      plugins:{legend:{display:false},tooltip:{callbacks:{
-        label:ctx=>` ${ctx.label}: ${Math.round(ctx.raw).toLocaleString()}원 (${totalAssets>0?(ctx.raw/totalAssets*100).toFixed(1):0}%)`
-      }}}
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${Math.round(ctx.raw).toLocaleString()}원`}}}
     }
   });
 
+  // 손익비 계산
   const avgWin  = winners.length > 0 ? winners.reduce((s,r)=>s+r.pnl,0) / winners.length : 0;
   const avgLoss = losers.length  > 0 ? Math.abs(losers.reduce((s,r)=>s+r.pnl,0) / losers.length) : 0;
   const rr      = avgLoss > 0 ? avgWin / avgLoss : 0;
@@ -401,33 +395,43 @@ function render(rows, cashKRW, cashUSD, usdRate) {
   document.getElementById('m-rrsub').textContent = avgLoss > 0
     ? `평균 +${Math.round(avgWin).toLocaleString()}원 / -${Math.round(avgLoss).toLocaleString()}원` : '';
 
+  // 손익 분석 차트
   const pnlBarEl = document.getElementById('pnlBarChart');
   if (sg.length > 0 && pnlBarEl) {
     const getLabel = key => key.split('|')[0];
     const sgKeys   = Object.keys(byName);
     const sgWithKey = sgKeys.map(k => ({key:k, ...byName[k]})).sort((a,b)=>b.pnl-a.pnl);
+
     const topWins   = sgWithKey.filter(r=>r.pnl>0).slice(0,5);
     const topLosses = sgWithKey.filter(r=>r.pnl<0).slice(-5).reverse();
     const topItems  = [...topWins, ...topLosses];
+
     if (window._pnlBarChart) window._pnlBarChart.destroy();
     window._pnlBarChart = new Chart(pnlBarEl, {
       type: 'bar',
       data: {
         labels: topItems.map(r => getLabel(r.key)),
-        datasets: [{ data: topItems.map(r => r.pnl), backgroundColor: topItems.map(r => r.pnl >= 0 ? 'rgba(22,163,74,0.8)' : 'rgba(220,38,38,0.8)'), borderRadius: 4 }]
+        datasets: [{
+          data: topItems.map(r => r.pnl),
+          backgroundColor: topItems.map(r => r.pnl >= 0 ? 'rgba(22,163,74,0.8)' : 'rgba(220,38,38,0.8)'),
+          borderRadius: 4,
+        }]
       },
       options: {
         responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => (ctx.raw >= 0 ? '+' : '') + Math.round(ctx.raw).toLocaleString('ko-KR') + '원' }}},
+        plugins: { legend: { display: false }, tooltip: { callbacks: {
+          label: ctx => (ctx.raw >= 0 ? '+' : '') + Math.round(ctx.raw).toLocaleString('ko-KR') + '원'
+        }}},
         scales: {
           x: { ticks: { font: { size: 9 }, maxRotation: 45, autoSkip: false, color: '#94a3b8' }, grid: { display: false } },
           y: { ticks: { font: { size: 9 }, color: '#94a3b8', callback: v => (v/10000).toFixed(0)+'만' }, grid: { color: '#f1f5f9' } }
         }
       }
     });
+
     const winRates  = sgWithKey.filter(r=>r.pnl>0).map(r=>r.buyAmt>0?r.pnl/r.buyAmt*100:0);
     const lossRates = sgWithKey.filter(r=>r.pnl<0).map(r=>r.buyAmt>0?r.pnl/r.buyAmt*100:0);
-    const avgWinRate  = winRates.length>0  ? winRates.reduce((s,v)=>s+v,0)/winRates.length : 0;
+    const avgWinRate  = winRates.length>0  ? winRates.reduce((s,v)=>s+v,0)/winRates.length   : 0;
     const avgLossRate = lossRates.length>0 ? lossRates.reduce((s,v)=>s+v,0)/lossRates.length : 0;
     if (document.getElementById('avg-win-val')) {
       document.getElementById('avg-win-val').textContent  = winners.length>0 ? '+'+Math.round(avgWin).toLocaleString('ko-KR')+'원' : '—';
