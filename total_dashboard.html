@@ -527,9 +527,8 @@ body {
           <div>
             <div class="hero-label">Total Assets</div>
             <div class="hero-val" id="heroTotal">—</div>
-            <div class="hero-sub" id="heroSub">전체 자산 합계</div>
           </div>
-          <div class="hero-badges" id="heroBadges"></div>
+          <div id="heroBadges" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;position:relative;z-index:1;"></div>
         </div>
         <div class="chart-card">
           <div class="chart-header">
@@ -884,14 +883,22 @@ function render(etfRows, depRows, tradeRows, cashRows, historyRows, divRows) {
   const grandTotal = totalEtfEval + totalStockInvest + totalDep + totalCash;
 
   document.getElementById('heroTotal').textContent = fmt(grandTotal)+'원';
-  document.getElementById('heroSub').textContent = `ETF ${fmt(totalEtfEval)} · 주식 ${fmt(totalStockInvest)} · 예적금 ${fmt(totalDep)} · 예수금 ${fmt(totalCash)}`;
   document.getElementById('donutCenter').textContent = Math.round(grandTotal/10000).toLocaleString()+'만';
-  document.getElementById('heroBadges').innerHTML = [
-    `ETF ${(totalEtfEval/grandTotal*100).toFixed(1)}%`,
-    `주식 ${(totalStockInvest/grandTotal*100).toFixed(1)}%`,
-    `예적금 ${(totalDep/grandTotal*100).toFixed(1)}%`,
-    `예수금 ${(totalCash/grandTotal*100).toFixed(1)}%`,
-  ].map(t=>`<div class="hero-badge">${t}</div>`).join('');
+
+  const badgeItems = [
+    { label: 'ETF',  val: totalEtfEval,     pct: totalEtfEval/grandTotal*100 },
+    { label: '주식', val: totalStockInvest, pct: totalStockInvest/grandTotal*100 },
+    { label: '예적금', val: totalDep,        pct: totalDep/grandTotal*100 },
+    { label: '예수금', val: totalCash,       pct: totalCash/grandTotal*100 },
+  ];
+  document.getElementById('heroBadges').innerHTML = badgeItems.map(b => `
+    <div style="background:rgba(255,255,255,0.18);border-radius:10px;padding:10px 12px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+        <div style="font-size:11px;opacity:0.75;">${b.label}</div>
+        <div style="font-size:11px;opacity:0.6;">${b.pct.toFixed(1)}%</div>
+      </div>
+      <div style="font-size:13px;font-weight:700;">${fmt(b.val)}원</div>
+    </div>`).join('');
 
   document.getElementById('kEtf').textContent = fmt(totalEtfEval)+'원';
   document.getElementById('kEtfSub').textContent = `${etfData.filter(r=>r.qty>0).length}종목`;
