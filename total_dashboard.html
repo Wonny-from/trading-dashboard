@@ -46,10 +46,8 @@ body {
   min-height: 100vh;
 }
 
-/* ── 레이아웃 ── */
 .layout { display: flex; min-height: 100vh; }
 
-/* ── 사이드바 ── */
 .sidebar {
   width: 220px;
   background: var(--white);
@@ -127,10 +125,8 @@ body {
   text-align: center;
 }
 
-/* ── 메인 콘텐츠 ── */
 .main { margin-left: 220px; flex: 1; }
 
-/* ── 탑바 ── */
 .topbar {
   background: var(--white);
   border-bottom: 1px solid var(--border);
@@ -182,13 +178,12 @@ body {
 .refresh-btn:hover { opacity: 0.9; transform: translateY(-1px); }
 .refresh-btn:active { transform: translateY(0); }
 
-/* ── 콘텐츠 영역 ── */
 .content { padding: 24px 28px; }
 
-/* ── 총 자산 히어로 + 그래프 ── */
+/* ✅ 3:7 비율로 수정 */
 .hero-grid {
   display: grid;
-  grid-template-columns: 280px 1fr;
+  grid-template-columns: 3fr 7fr;
   gap: 20px;
   margin-bottom: 20px;
 }
@@ -275,7 +270,6 @@ body {
 .chart-sub { font-size: 11px; color: var(--muted); margin-top: 3px; }
 .chart-wrap { position: relative; height: 150px; }
 
-/* ── KPI 카드 ── */
 .kpi-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -312,7 +306,6 @@ body {
 .pos { color: var(--green) !important; }
 .neg { color: var(--red) !important; }
 
-/* ── 메인 그리드 ── */
 .main-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -345,7 +338,6 @@ body {
   color: var(--purple);
 }
 
-/* ── ETF 테이블 ── */
 .etf-table { width: 100%; border-collapse: collapse; }
 .etf-table th {
   font-size: 10px;
@@ -390,7 +382,6 @@ body {
   border-bottom: none !important;
 }
 
-/* ── 도넛 차트 ── */
 .donut-wrap { position: relative; height: 180px; margin-bottom: 20px; }
 .donut-center {
   position: absolute; top: 50%; left: 50%;
@@ -407,7 +398,6 @@ body {
 .legend-pct { font-size: 11px; color: var(--muted); font-weight: 600; }
 .legend-val { font-family: 'Nunito', sans-serif; font-size: 13px; font-weight: 800; color: var(--text); }
 
-/* ── 그라디언트 배너 카드 ── */
 .banner-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -438,14 +428,7 @@ body {
 .banner-card-label { font-size: 11px; font-weight: 700; opacity: 0.85; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px; }
 .banner-card-val { font-family: 'Nunito', sans-serif; font-size: 26px; font-weight: 800; line-height: 1; margin-bottom: 6px; position: relative; z-index: 1; }
 .banner-card-sub { font-size: 11px; opacity: 0.75; font-weight: 600; }
-.banner-wave {
-  position: absolute;
-  bottom: 0; left: 0; right: 0;
-  height: 40px;
-  opacity: 0.15;
-}
 
-/* ── 하단 그리드 ── */
 .bottom-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -479,12 +462,10 @@ body {
 .stock-label { font-size: 12px; font-weight: 600; color: var(--muted); }
 .stock-val { font-family: 'Nunito', sans-serif; font-size: 14px; font-weight: 800; color: var(--text); }
 
-/* ── 로딩 ── */
 .loading { display: flex; align-items: center; justify-content: center; padding: 2rem; color: var(--muted); font-size: 13px; gap: 8px; font-weight: 600; }
 .spinner { width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--purple); border-radius: 50%; animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ── 모바일 ── */
 @media (max-width: 1024px) {
   .sidebar { display: none; }
   .main { margin-left: 0; }
@@ -506,7 +487,6 @@ body {
 <body>
 <div class="layout">
 
-  <!-- 사이드바 -->
   <div class="sidebar">
     <div class="sidebar-logo">
       <div class="logo-icon">💰</div>
@@ -526,9 +506,7 @@ body {
     </div>
   </div>
 
-  <!-- 메인 -->
   <div class="main">
-    <!-- 탑바 -->
     <div class="topbar">
       <div class="topbar-left">
         <h2>통합 자산 대시보드</h2>
@@ -543,10 +521,8 @@ body {
       </div>
     </div>
 
-    <!-- 콘텐츠 -->
     <div class="content">
 
-      <!-- 히어로 + 자산 그래프 -->
       <div class="hero-grid">
         <div class="hero-card">
           <div>
@@ -569,7 +545,6 @@ body {
         </div>
       </div>
 
-      <!-- KPI -->
       <div class="kpi-grid">
         <div class="kpi">
           <div class="kpi-icon pink">📈</div>
@@ -605,7 +580,6 @@ body {
         </div>
       </div>
 
-      <!-- 배너 카드 -->
       <div class="banner-grid">
         <div class="banner-card pink">
           <div class="banner-card-label">월 배당 수익</div>
@@ -624,7 +598,6 @@ body {
         </div>
       </div>
 
-      <!-- ETF 테이블 + 도넛 -->
       <div class="main-grid">
         <div class="card">
           <div class="card-title">
@@ -648,7 +621,6 @@ body {
         </div>
       </div>
 
-      <!-- 예적금 + 주식/현금 -->
       <div class="bottom-grid">
         <div class="card">
           <div class="card-title">예적금 현황</div>
@@ -665,12 +637,10 @@ body {
 </div>
 
 <script>
-// ── URL ──────────────────────────────────────────────────
 const ETF_URL    = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRgDk4qNXL-ByfHEPG7pwnK8Zz96-IPU5GlC0D_kFipnAkKiBtSIvyQsnZWZ0uofAA51iqxOCsZ2-_W/pub?gid=958926121&single=true&output=csv';
 const DEP_URL    = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRgDk4qNXL-ByfHEPG7pwnK8Zz96-IPU5GlC0D_kFipnAkKiBtSIvyQsnZWZ0uofAA51iqxOCsZ2-_W/pub?gid=1294833982&single=true&output=csv';
 const TRADE_URL  = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRgDk4qNXL-ByfHEPG7pwnK8Zz96-IPU5GlC0D_kFipnAkKiBtSIvyQsnZWZ0uofAA51iqxOCsZ2-_W/pub?gid=512959016&single=true&output=csv';
 const CASH_URL   = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRgDk4qNXL-ByfHEPG7pwnK8Zz96-IPU5GlC0D_kFipnAkKiBtSIvyQsnZWZ0uofAA51iqxOCsZ2-_W/pub?gid=2018962040&single=true&output=csv';
-// ⬇ 자산히스토리 시트 URL — 만들고 나서 여기에 붙여넣기
 const HISTORY_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRgDk4qNXL-ByfHEPG7pwnK8Zz96-IPU5GlC0D_kFipnAkKiBtSIvyQsnZWZ0uofAA51iqxOCsZ2-_W/pub?gid=1272784363&single=true&output=csv';
 const DIV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRgDk4qNXL-ByfHEPG7pwnK8Zz96-IPU5GlC0D_kFipnAkKiBtSIvyQsnZWZ0uofAA51iqxOCsZ2-_W/pub?gid=351028190&single=true&output=csv';
 
@@ -703,8 +673,6 @@ let assetChart = null;
 let g_holding = [];
 let g_sold = [];
 let g_usdRate = 1480;
-
-// ── ETF 모달 ──────────────────────────────────────────
 let g_etfData = [];
 let g_divRows = [];
 
@@ -788,7 +756,6 @@ function closeEtfModal(e) {
   document.body.style.overflow = '';
 }
 
-// ── 주식 모달 ──────────────────────────────────────────
 function openStockModal() {
   const cleanNum = v => Number(String(v||0).replace(/,/g,''));
   const grouped = {};
@@ -872,21 +839,17 @@ function closeStockModal(e) {
 function render(etfRows, depRows, tradeRows, cashRows, historyRows, divRows) {
   const cleanNum = v => Number(String(v||0).replace(/,/g,''));
 
-  // 현금
   const cashKRW    = cleanNum(cashRows.find(r=>r['구분']==='원화')?.['금액']);
   const cashUSD    = cleanNum(cashRows.find(r=>r['구분']==='달러')?.['금액']);
   const usdRate    = cleanNum(cashRows.find(r=>r['구분']==='환율')?.['금액'])||1480;
   const cashUSDkrw = cashUSD * usdRate;
   const totalCash  = cashKRW + cashUSDkrw;
 
-  // 예적금
   const depItems = depRows.filter(r=>r['구분']&&r['잔액']);
   const totalDep = depItems.reduce((s,r)=>s+cleanNum(r['잔액']),0);
 
-  // 주식
   const holding = tradeRows.filter(r=>String(r['상태']||'').includes('보유'));
   const sold    = tradeRows.filter(r=>String(r['상태']||'').includes('매도'));
-  // 글로벌 저장 (모달용)
   g_holding = holding;
   g_sold = sold;
   g_usdRate = cleanNum(cashRows.find(r=>r['구분']==='환율')?.['금액'])||1480;
@@ -900,7 +863,6 @@ function render(etfRows, depRows, tradeRows, cashRows, historyRows, divRows) {
   },{})).filter(r=>r.pnl>0).length;
   const totalSoldNames = Object.keys(sold.reduce((acc,r)=>({...acc,[r['종목']]:1}),{})).length;
 
-  // ETF
   const etfData = etfRows.map(r=>({
     name:     r['종목명']||'',
     qty:      cleanNum(r['수량']),
@@ -922,7 +884,6 @@ function render(etfRows, depRows, tradeRows, cashRows, historyRows, divRows) {
 
   const grandTotal = totalEtfEval + totalStockInvest + totalDep + totalCash;
 
-  // ── 히어로 ──
   document.getElementById('heroTotal').textContent = fmt(grandTotal)+'원';
   document.getElementById('heroSub').textContent = `ETF ${fmt(totalEtfEval)} · 주식 ${fmt(totalStockInvest)} · 예적금 ${fmt(totalDep)} · 예수금 ${fmt(totalCash)}`;
   document.getElementById('donutCenter').textContent = Math.round(grandTotal/10000).toLocaleString()+'만';
@@ -933,7 +894,6 @@ function render(etfRows, depRows, tradeRows, cashRows, historyRows, divRows) {
     `예수금 ${(totalCash/grandTotal*100).toFixed(1)}%`,
   ].map(t=>`<div class="hero-badge">${t}</div>`).join('');
 
-  // ── KPI ──
   document.getElementById('kEtf').textContent = fmt(totalEtfEval)+'원';
   document.getElementById('kEtfSub').textContent = `${etfData.filter(r=>r.qty>0).length}종목`;
   const krCount = new Set(holding.filter(r=>r['시장']==='국장').map(r=>r['종목'])).size;
@@ -947,14 +907,12 @@ function render(etfRows, depRows, tradeRows, cashRows, historyRows, divRows) {
   pEl.className = 'kpi-val '+(totalEtfPnl>=0?'pos':'neg');
   document.getElementById('kPnlSub').textContent = fmtP(pnlPct);
 
-  // ── 배너 ──
   document.getElementById('bDiv').textContent = fmt(monthlyDiv)+'원';
   document.getElementById('bAnnual').textContent = fmt(monthlyDiv*12)+'원';
   const bPnl = document.getElementById('bPnlPct');
   bPnl.textContent = fmtP(pnlPct);
   document.getElementById('bPnlSub').textContent = `${fmtW(totalEtfPnl)}원 손익`;
 
-  // ── ETF 테이블 ──
   document.getElementById('etfCount').textContent = etfData.filter(r=>r.qty>0).length+'종목';
   document.getElementById('etfTableWrap').innerHTML = (function(){
     const rows = etfData.map(r => {
@@ -987,7 +945,6 @@ function render(etfRows, depRows, tradeRows, cashRows, historyRows, divRows) {
       +'</tr></tbody></table>';
   })();
 
-  // ── 도넛 ──
   const dData = [
     {label:'ETF',    val:totalEtfEval,      color:'#7c5ce4'},
     {label:'주식',   val:totalStockInvest,  color:'#ff4d8d'},
@@ -1015,7 +972,6 @@ function render(etfRows, depRows, tradeRows, cashRows, historyRows, divRows) {
       </div>
     </div>`).join('');
 
-  // ── 월별 자산 그래프 ──
   let histLabels = [], histVals = [];
   if(historyRows && historyRows.length>0) {
     const sorted = historyRows.filter(r=>{
@@ -1035,7 +991,6 @@ function render(etfRows, depRows, tradeRows, cashRows, historyRows, divRows) {
         : `${histLabels[0]} ~ ${histLabels[histLabels.length-1]} · ${histLabels.length}개월`;
     }
   } else {
-    // 히스토리 없으면 현재 데이터 1포인트만
     const now = new Date();
     histLabels = [`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`];
     histVals   = [grandTotal];
@@ -1074,7 +1029,6 @@ function render(etfRows, depRows, tradeRows, cashRows, historyRows, divRows) {
     }
   });
 
-  // ── 예적금 ──
   document.getElementById('depositList').innerHTML = `
     ${depItems.map((r,i)=>{
       const icons = ['🏦','💰','🏧','💳'];
@@ -1094,7 +1048,6 @@ function render(etfRows, depRows, tradeRows, cashRows, historyRows, divRows) {
       <span class="deposit-val" style="color:var(--purple);">${fmt(totalDep)}원</span>
     </div>`;
 
-  // ── 주식·현금 ──
   document.getElementById('stockCashList').innerHTML = `
     <div class="stock-row"><span class="stock-label">📈 국장 투자금</span><span class="stock-val">${fmt(krAmt)}원</span></div>
     <div class="stock-row"><span class="stock-label">🌐 미장 투자금</span><span class="stock-val">${fmt(usAmt)}원</span></div>
@@ -1105,7 +1058,6 @@ function render(etfRows, depRows, tradeRows, cashRows, historyRows, divRows) {
     <div class="stock-row"><span class="stock-label">💱 적용 환율</span><span class="stock-val" style="color:var(--muted);">${fmt(usdRate)}원</span></div>
     <div class="stock-row" style="background:linear-gradient(135deg,rgba(0,200,151,0.08),rgba(0,229,179,0.05));border:1px solid rgba(0,200,151,0.2);"><span class="stock-label" style="font-weight:700;color:var(--green);">💵 예수금 합계</span><span class="stock-val" style="color:var(--green);">${fmt(totalCash)}원</span></div>`;
 
-  // ── 상태 ──
   const now = new Date().toLocaleTimeString('ko-KR');
   document.getElementById('sDot').style.background = '#00c897';
   document.getElementById('sTxt').textContent = `연동 완료 · ${now}`;
