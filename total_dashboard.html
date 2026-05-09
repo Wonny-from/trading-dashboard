@@ -331,7 +331,7 @@ function renderRebalance(riskPct, krwPct, usdPct, goldPct, bondPct, grandTotal) 
 
   // 안전자산 내부 구성 체크
   const safeChecks = [
-    {label:'원화 예적금', pct: krwPct, target: TARGET.krw, color:'#4f8eff'},
+    {label:'원화',   pct: krwPct, target: TARGET.krw, color:'#4f8eff'},
     {label:'달러',        pct: usdPct, target: TARGET.usd, color:'#00c897'},
     {label:'금 ETF',      pct: goldPct, target: TARGET.gold, color:'#ff8c42'},
     {label:'채권 ETF',    pct: bondPct, target: TARGET.bond, color:'#7c5ce4'},
@@ -524,9 +524,9 @@ function render(etfRows, depRows, tradeRows, cashRows, historyRows, divRows) {
   const grandTotal = totalEtfEval + totalStockInvest + totalDep + totalCash;
 
   // 비중 계산 (금ETF/채권ETF는 안전자산으로 분류)
-  const riskAmt  = totalStockInvest + otherEtfAmt + totalCash; // 예수금 위험자산으로
-  const krwAmt   = totalDep;
-  const usdAmt   = cashUSDkrw;
+  const riskAmt  = totalStockInvest + otherEtfAmt; // 예수금 제외
+  const krwAmt   = totalDep + cashKRW;             // 원화 예적금 + 원화 예수금
+  const usdAmt   = cashUSDkrw;                     // 달러 예수금
   const riskPct  = grandTotal > 0 ? riskAmt  / grandTotal * 100 : 0;
   const krwPct   = grandTotal > 0 ? krwAmt   / grandTotal * 100 : 0;
   const usdPct   = grandTotal > 0 ? usdAmt   / grandTotal * 100 : 0;
