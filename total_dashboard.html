@@ -370,8 +370,8 @@ function renderRebalance(riskPct, krwPct, usdPct, goldPct, bondPct, grandTotal) 
 
     <div style="margin-top:12px;">
       <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:8px;">안전자산 내부 구성 (목표 원화 30% · 달러 30% · 금 20% · 채권 20%)</div>
+      const maxPct = Math.max(...safeChecks.map(s => Math.max(s.pct, s.target))) + 5;
       ${safeChecks.map(s=>{
-        const maxPct = Math.max(s.pct, s.target) + 5;
         const barW = Math.min(s.pct / maxPct * 100, 100);
         const targetW = Math.min(s.target / maxPct * 100, 100);
         const diff = s.pct - s.target;
