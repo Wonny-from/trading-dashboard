@@ -255,10 +255,13 @@ body { font-family: 'Nunito Sans', sans-serif; background: var(--bg); color: var
             </div>
           </div>
           <div class="legend-list" id="donutLegend"></div>
-
-          <!-- 리밸런싱 섹션 -->
-          <div class="rebalance-section" id="rebalanceSection"></div>
         </div>
+      </div>
+
+      <!-- 포트폴리오 비중 현황 (별도 섹션) -->
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-title">포트폴리오 비중 현황</div>
+        <div id="rebalanceSection"><div class="loading"><div class="spinner"></div></div></div>
       </div>
 
       <div class="bottom-grid">
@@ -342,8 +345,7 @@ function renderRebalance(riskPct, krwPct, usdPct, goldPct, bondPct, grandTotal) 
 
   // 바 렌더링
   const barHTML = `
-    <div class="rebalance-bar-wrap" style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);">
-      <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">포트폴리오 비중 현황</div>
+    <div class="rebalance-bar-wrap">
       <div class="rebalance-bar">
         <div style="width:${riskPct.toFixed(1)}%;background:#ff4d8d;border-radius:999px 0 0 999px;"></div>
         <div style="width:${krwPct.toFixed(1)}%;background:#4f8eff;"></div>
@@ -521,8 +523,8 @@ function render(etfRows, depRows, tradeRows, cashRows, historyRows, divRows) {
 
   const grandTotal = totalEtfEval + totalStockInvest + totalDep + totalCash;
 
-  // 비중 계산
-  const riskAmt  = totalStockInvest + totalEtfEval + totalCash; // 예수금 위험자산으로
+  // 비중 계산 (금ETF/채권ETF는 안전자산으로 분류)
+  const riskAmt  = totalStockInvest + otherEtfAmt + totalCash; // 예수금 위험자산으로
   const krwAmt   = totalDep;
   const usdAmt   = cashUSDkrw;
   const riskPct  = grandTotal > 0 ? riskAmt  / grandTotal * 100 : 0;
