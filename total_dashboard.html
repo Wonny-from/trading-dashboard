@@ -557,12 +557,12 @@ function render(etfRows, depRows, tradeRows, cashRows, historyRows, divRows) {
     {label:'달러 예수금',val:cashUSDkrw,      pct:cashUSDkrw/grandTotal*100},
   ];
   const badgeHtml = b => `
-    <div style="background:rgba(255,255,255,0.18);border-radius:10px;padding:10px 12px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-        <div style="font-size:11px;opacity:0.75;">${b.label}</div>
-        <div style="font-size:11px;opacity:0.6;">${b.pct.toFixed(1)}%</div>
+    <div style="background:rgba(255,255,255,0.18);border-radius:8px;padding:7px 10px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;">
+        <div style="font-size:10px;opacity:0.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${b.label}</div>
+        <div style="font-size:10px;opacity:0.6;margin-left:4px;flex-shrink:0;">${b.pct.toFixed(1)}%</div>
       </div>
-      <div style="font-size:13px;font-weight:700;">${fmt(b.val)}원</div>
+      <div style="font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${fmt(b.val)}원</div>
     </div>`;
   document.getElementById('heroBadges').innerHTML =
     `<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px;">${row1.map(badgeHtml).join('')}</div>` +
