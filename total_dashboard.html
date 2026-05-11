@@ -340,7 +340,12 @@ function renderRebalance(riskPct, krwPct, usdPct, goldPct, bondPct, grandTotal) 
   const lowItems = safeChecks.filter(s => s.pct < s.target - THRESHOLD/2);
   if (lowItems.length > 0) {
     alerts.push({type:'info', icon:'💡', title:'안전자산 내부 분산 필요',
-      desc: lowItems.map(s=>`${s.label}: 현재 ${s.pct.toFixed(1)}% (목표 ${s.target}%)`).join(' · ')});
+      desc: lowItems.map(s=>{
+        const targetAmt = Math.round(s.target / 100 * grandTotal);
+        const currentAmt = Math.round(s.pct / 100 * grandTotal);
+        const needAmt = targetAmt - currentAmt;
+        return `${s.label}: 현재 ${s.pct.toFixed(1)}% (${fmt(currentAmt)}원) → 목표 ${s.target}% (${fmt(targetAmt)}원) · 약 ${fmt(needAmt)}원 부족`;
+      }).join('<br>')});
   }
 
   // 바 렌더링
