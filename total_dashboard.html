@@ -220,6 +220,7 @@ body { font-family: 'Nunito Sans', sans-serif; background: var(--bg); color: var
               <div class="chart-title">월별 총 자산 추이</div>
               <div class="chart-sub" id="chartSub">월말 기준 총 자산 변화</div>
             </div>
+            <div id="chartBadge" style="text-align:right;"></div>
           </div>
           <div class="chart-wrap">
             <canvas id="assetChart" role="img" aria-label="월별 총 자산 추이 차트"></canvas>
@@ -616,6 +617,25 @@ function render(etfRows, depRows, tradeRows, cashRows, historyRows, divRows) {
     const sorted=historyRows.filter(r=>{const mon=r['월']||'';const val=r['총자산(자동)']||r['총자산']||'';return mon.trim()!==''&&val.toString().trim()!=='';}).sort((a,b)=>{const ma=String(a['월']).trim();const mb=String(b['월']).trim();return ma>mb?1:-1;});
     histLabels=sorted.map(r=>String(r['월']).trim());histVals=sorted.map(r=>cleanNum(r['총자산(자동)']||r['총자산']||0));
     if(histLabels.length>0)document.getElementById('chartSub').textContent=histLabels.length===1?`${histLabels[0]} 기준 · 매월 말 데이터 추가 시 그래프가 쌓입니다`:`${histLabels[0]} ~ ${histLabels[histLabels.length-1]} · ${histLabels.length}개월`;
+
+  // 전월 대비 뱃지
+  const badgeEl = document.getElementById('chartBadge');
+  if (histVals.length >= 2) {
+    const last = histVals[histVals.length - 1];
+    const prev = histVals[histVals.length - 2];
+    const diff = last - prev;
+    const pct = ((diff / prev) * 100).toFixed(1);
+    const sign = diff >= 0 ? '+' : '';
+    const isPos = diff >= 0;
+    badgeEl.innerHTML = `
+      <div style="display:flex;align-items:center;gap:6px;justify-content:flex-end;margin-bottom:4px;">
+        <span style="font-size:11px;color:var(--muted);">전월 대비</span>
+        <span style="background:${isPos?'rgba(0,200,151,0.12)':'rgba(255,91,91,0.12)'};color:${isPos?'var(--green)':'var(--red)'};font-size:13px;font-weight:700;padding:3px 10px;border-radius:20px;">${isPos?'▲':'▼'} ${sign}${pct}%</span>
+      </div>
+      <div style="font-size:11px;color:var(--muted);">${sign}${fmt(Math.abs(diff))}원</div>`;
+  } else {
+    badgeEl.innerHTML = '';
+  }
   } else {
     const now=new Date();histLabels=[`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`];histVals=[grandTotal];
     document.getElementById('chartSub').textContent='자산히스토리 시트를 추가하면 추이가 표시됩니다';
