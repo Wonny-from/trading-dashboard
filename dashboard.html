@@ -30,6 +30,12 @@
   .metric-sub { font-size: 11px; color: #94a3b8; margin-top: 5px; }
   .pos { color: #16a34a !important; } .neg { color: #dc2626 !important; }
 
+  /* 환율 출처 배지 */
+  .rate-source-badge { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 600; padding: 1px 7px; border-radius: 20px; margin-left: 5px; vertical-align: middle; }
+  .rate-source-live     { background: #f0fdf4; color: #16a34a; }
+  .rate-source-sheet    { background: #fefce8; color: #a16207; }
+  .rate-source-fallback { background: #fef2f2; color: #dc2626; }
+
   .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1.5rem; }
   .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
   .card-full { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
@@ -182,6 +188,18 @@ function parseCsv(url) {
   });
 }
 
+// ─── 환율 API 직접 호출 (API → 시트 → fallback 순서로 사용) ───
+async function fetchUsdKrw() {
+  try {
+    const res = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+    const data = await res.json();
+    const rate = data.rates?.KRW;
+    return (rate && rate > 1000) ? Math.round(rate) : null;
+  } catch {
+    return null;
+  }
+}
+
 function toggleMonth(id) {
   const body  = document.getElementById('body-'+id);
   const arrow = document.getElementById('arrow-'+id);
@@ -195,15 +213,10 @@ function buildAccordion(rows) {
   const tableMap = {};
   [...rows].reverse().forEach(r => {
     const isSold = String(r['상태']||'').includes('매도');
-
-    // ✅ FIX 1: 매도완료는 매도일 기준 월, 보유중은 매수일 기준 월
     const mon = isSold
       ? (r['매도일']||r['매수일']||'').slice(0,7)
       : (r['매수일']||'').slice(0,7);
-
-    // ✅ FIX 2: 매도일을 key에 포함해서 같은 종목 다른 매도일은 별개 행으로
     const key = r['종목']+'|'+(r['시장']||'')+'|'+(r['상태']||'')+'|'+mon+'|'+(r['매도일']||'');
-
     if (!tableMap[key]) {
       tableMap[key] = {
         종목: r['종목'], 시장: r['시장']||'', 상태: String(r['상태']||''),
@@ -292,15 +305,17 @@ function buildAccordion(rows) {
   document.getElementById('accordion').innerHTML = html;
 }
 
-function render(rows, cashKRW, cashUSD, usdRate) {
+function render(rows, cashKRW, cashUSD, usdRate, rateSource) {
+  const rateBadgeClass = rateSource === 'live' ? 'rate-source-live' : rateSource === 'sheet' ? 'rate-source-sheet' : 'rate-source-fallback';
+  const rateBadgeLabel = rateSource === 'live' ? '🟢 실시간' : rateSource === 'sheet' ? '🟡 시트값' : '🔴 기본값';
+
   document.getElementById('sDot').style.background = '#0066ff';
-  document.getElementById('sTxt').textContent = `연동 완료 · 매매 ${rows.length}건 · 환율 ${Math.round(usdRate).toLocaleString()}원 · ${new Date().toLocaleTimeString('ko-KR')}`;
+  document.getElementById('sTxt').innerHTML = `연동 완료 · 매매 ${rows.length}건 · 환율 ${Math.round(usdRate).toLocaleString()}원 <span class="rate-source-badge ${rateBadgeClass}">${rateBadgeLabel}</span> · ${new Date().toLocaleTimeString('ko-KR')}`;
   document.getElementById('lastUpdate').textContent = `마지막 업데이트: ${new Date().toLocaleString('ko-KR')}`;
 
   const holding = rows.filter(r => String(r['상태']||'').includes('보유'));
   const sold    = rows.filter(r => String(r['상태']||'').includes('매도'));
 
-  // ✅ FIX 3: 손익 분석 차트 - 종목|시장 기준으로 합산 (매도일 무시)
   const byName = {};
   sold.forEach(r => {
     const key = r['종목'] + '|' + (r['시장']||'');
@@ -335,7 +350,7 @@ function render(rows, cashKRW, cashUSD, usdRate) {
   document.getElementById('m-total').textContent = fmtA(totalInvest);
   document.getElementById('m-hold').textContent = `국장 ${kr} / 미장 ${us} 보유중`;
   document.getElementById('m-cash').textContent = fmtA(totalCash);
-  document.getElementById('m-cash-sub').textContent = `원화 ${Math.round(cashKRW).toLocaleString()}원 + $${cashUSD.toLocaleString()}`;
+  document.getElementById('m-cash-sub').innerHTML = `원화 ${Math.round(cashKRW).toLocaleString()}원 + $${cashUSD.toLocaleString()} <span class="rate-source-badge ${rateBadgeClass}">${rateBadgeLabel}</span>`;
   const pEl = document.getElementById('m-pnl');
   pEl.textContent = fmtW(totalPnl);
   pEl.className = 'metric-value '+(totalPnl>=0?'pos':'neg');
@@ -448,12 +463,22 @@ async function run() {
   document.getElementById('sDot').style.background = '#f59e0b';
   document.getElementById('sTxt').textContent = '구글 시트 연결 중...';
   try {
-    const [tradeRows, cashRows] = await Promise.all([parseCsv(TRADE_CSV), parseCsv(CASH_CSV)]);
+    // ─── 구글시트 2개 + 환율 API를 모두 병렬 호출 ───
+    const [tradeRows, cashRows, liveRate] = await Promise.all([
+      parseCsv(TRADE_CSV),
+      parseCsv(CASH_CSV),
+      fetchUsdKrw(),  // ← 환율 API 병렬 호출 (실패해도 null 반환)
+    ]);
     const cleanNum = v => Number(String(v||0).replace(/,/g,''));
-    const cashKRW = cleanNum(cashRows.find(r=>r['구분']==='원화')?.['금액']);
-    const cashUSD = cleanNum(cashRows.find(r=>r['구분']==='달러')?.['금액']);
-    const usdRate = cleanNum(cashRows.find(r=>r['구분']==='환율')?.['금액'])||1480;
-    render(tradeRows, cashKRW, cashUSD, usdRate);
+    const cashKRW  = cleanNum(cashRows.find(r=>r['구분']==='원화')?.['금액']);
+    const cashUSD  = cleanNum(cashRows.find(r=>r['구분']==='달러')?.['금액']);
+
+    // ─── 환율 우선순위: API 실시간 → 시트값 → 기본값 1480 ───
+    const sheetRate  = cleanNum(cashRows.find(r=>r['구분']==='환율')?.['금액']);
+    const usdRate    = liveRate || sheetRate || 1480;
+    const rateSource = liveRate ? 'live' : (sheetRate ? 'sheet' : 'fallback');
+
+    render(tradeRows, cashKRW, cashUSD, usdRate, rateSource);
   } catch(e) {
     document.getElementById('sDot').style.background = '#dc2626';
     document.getElementById('sTxt').textContent = '오류: '+e.message;
