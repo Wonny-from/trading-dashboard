@@ -126,6 +126,12 @@ body { font-family: 'Nunito Sans', sans-serif; background: var(--bg); color: var
 .spinner { width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--purple); border-radius: 50%; animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* 환율 배지 */
+.rate-source-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px; margin-left: 6px; vertical-align: middle; }
+.rate-source-live { background: rgba(0,200,151,0.12); color: var(--green); }
+.rate-source-sheet { background: rgba(255,184,48,0.15); color: #a06800; }
+.rate-source-fallback { background: rgba(255,91,91,0.1); color: var(--red); }
+
 /* 리밸런싱 섹션 */
 .rebalance-section { margin-top: 20px; }
 .rebalance-bar-wrap { margin-bottom: 14px; }
@@ -289,13 +295,10 @@ const ETF_SHORT = {
   'TIGER 미국S&P500':'S&P500','ACE KRX 금현물':'금현물',
   'ACE 미국배당다우존스':'배당다우','ACE 미국30년국채(H)':'30년국채','TIGER 리츠부동산인프라':'리츠',
 };
-// 금/채권 ETF 분류
-const GOLD_ETF_NAMES    = ['ACE KRX 금현물'];
-const BOND_ETF_NAMES    = ['ACE 미국30년국채(H)'];
+const GOLD_ETF_NAMES = ['ACE KRX 금현물'];
+const BOND_ETF_NAMES = ['ACE 미국30년국채(H)'];
 
-// 목표 비중 (%)
 const TARGET = { risk: 60, krw: 12, usd: 12, gold: 8, bond: 8 };
-// 리밸런싱 경고 임계값 (목표 대비 ±p%p 벗어나면 경고)
 const THRESHOLD = 10;
 
 const nv  = v => Number(String(v||0).replace(/,/g,''))||0;
@@ -309,12 +312,23 @@ const parseCsv = url => new Promise((res,rej)=>{
 let donutChart=null, assetChart=null;
 let g_holding=[], g_sold=[], g_usdRate=1480, g_etfData=[], g_divRows=[];
 
+// ─── 환율 API 직접 호출 (API → 시트 → fallback 순서로 사용) ───
+async function fetchUsdKrw() {
+  try {
+    const res = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+    const data = await res.json();
+    const rate = data.rates?.KRW;
+    return (rate && rate > 1000) ? Math.round(rate) : null;
+  } catch {
+    return null;
+  }
+}
+
 function renderRebalance(riskPct, krwPct, usdPct, goldPct, bondPct, grandTotal, usdRate) {
   const safePct = krwPct + usdPct + goldPct + bondPct;
   const riskDiff = riskPct - TARGET.risk;
   const alerts = [];
 
-  // 전체 위험:안전 체크
   if (Math.abs(riskDiff) > THRESHOLD) {
     if (riskDiff < 0) {
       const needed = Math.round((TARGET.risk - riskPct) / 100 * grandTotal);
@@ -330,12 +344,11 @@ function renderRebalance(riskPct, krwPct, usdPct, goldPct, bondPct, grandTotal, 
       desc:`슈카 권장 기준(60:40) 범위 내에 있어요.`});
   }
 
-  // 안전자산 내부 구성 체크
   const safeChecks = [
-    {label:'원화',   pct: krwPct, target: TARGET.krw, color:'#4f8eff'},
-    {label:'달러',        pct: usdPct, target: TARGET.usd, color:'#00c897'},
-    {label:'금 ETF',      pct: goldPct, target: TARGET.gold, color:'#ff8c42'},
-    {label:'채권 ETF',    pct: bondPct, target: TARGET.bond, color:'#7c5ce4'},
+    {label:'원화',     pct: krwPct,  target: TARGET.krw,  color:'#4f8eff'},
+    {label:'달러',     pct: usdPct,  target: TARGET.usd,  color:'#00c897'},
+    {label:'금 ETF',   pct: goldPct, target: TARGET.gold, color:'#ff8c42'},
+    {label:'채권 ETF', pct: bondPct, target: TARGET.bond, color:'#7c5ce4'},
   ];
 
   const lowItems = safeChecks.filter(s => s.pct < s.target - THRESHOLD/2);
@@ -355,7 +368,6 @@ function renderRebalance(riskPct, krwPct, usdPct, goldPct, bondPct, grandTotal, 
       }).join('<br>')});
   }
 
-  // 바 렌더링
   const barHTML = `
     <div class="rebalance-bar-wrap">
       <div class="rebalance-bar">
@@ -494,11 +506,16 @@ function openStockModal() {
 }
 function closeStockModal(e){if(e&&e.target!==document.getElementById('stockModal'))return;document.getElementById('stockModal').style.display='none';document.body.style.overflow='';}
 
-function render(etfRows, depRows, tradeRows, cashRows, historyRows, divRows) {
+function render(etfRows, depRows, tradeRows, cashRows, historyRows, divRows, liveRate) {
   const cleanNum = v => Number(String(v||0).replace(/,/g,''));
   const cashKRW    = cleanNum(cashRows.find(r=>r['구분']==='원화')?.['금액']);
   const cashUSD    = cleanNum(cashRows.find(r=>r['구분']==='달러')?.['금액']);
-  const usdRate    = cleanNum(cashRows.find(r=>r['구분']==='환율')?.['금액'])||1480;
+
+  // ─── 환율 우선순위: API 실시간 → 시트값 → 기본값 1480 ───
+  const sheetRate  = cleanNum(cashRows.find(r=>r['구분']==='환율')?.['금액']);
+  const usdRate    = liveRate || sheetRate || 1480;
+  const rateSource = liveRate ? 'live' : (sheetRate ? 'sheet' : 'fallback');
+
   const cashUSDkrw = cashUSD * usdRate;
   const totalCash  = cashKRW + cashUSDkrw;
   const depItems   = depRows.filter(r=>r['구분']&&r['잔액']);
@@ -507,7 +524,7 @@ function render(etfRows, depRows, tradeRows, cashRows, historyRows, divRows) {
   const holding = tradeRows.filter(r=>String(r['상태']||'').includes('보유'));
   const sold    = tradeRows.filter(r=>String(r['상태']||'').includes('매도'));
   g_holding = holding; g_sold = sold;
-  g_usdRate = cleanNum(cashRows.find(r=>r['구분']==='환율')?.['금액'])||1480;
+  g_usdRate = usdRate;
   const totalStockInvest = holding.reduce((s,r)=>s+cleanNum(r['매수금액(원)']),0);
   const totalPnl = sold.reduce((s,r)=>s+cleanNum(r['손익(원)']),0);
   const krAmt = holding.filter(r=>r['시장']==='국장').reduce((s,r)=>s+cleanNum(r['매수금액(원)']),0);
@@ -528,22 +545,20 @@ function render(etfRows, depRows, tradeRows, cashRows, historyRows, divRows) {
   const pnlPct = totalEtfInv>0 ? totalEtfPnl/totalEtfInv*100 : 0;
   g_etfData = etfData; g_divRows = divRows||[];
 
-  // 금/채권 ETF 평가금 분리
-  const goldEtfAmt = etfData.filter(r=>GOLD_ETF_NAMES.includes(r.name)).reduce((s,r)=>s+r.eval,0);
-  const bondEtfAmt = etfData.filter(r=>BOND_ETF_NAMES.includes(r.name)).reduce((s,r)=>s+r.eval,0);
+  const goldEtfAmt  = etfData.filter(r=>GOLD_ETF_NAMES.includes(r.name)).reduce((s,r)=>s+r.eval,0);
+  const bondEtfAmt  = etfData.filter(r=>BOND_ETF_NAMES.includes(r.name)).reduce((s,r)=>s+r.eval,0);
   const otherEtfAmt = totalEtfEval - goldEtfAmt - bondEtfAmt;
 
   const grandTotal = totalEtfEval + totalStockInvest + totalDep + totalCash;
 
-  // 비중 계산 (금ETF/채권ETF는 안전자산으로 분류)
-  const riskAmt  = totalStockInvest + otherEtfAmt; // 예수금 제외
-  const krwAmt   = totalDep + cashKRW;             // 원화 예적금 + 원화 예수금
-  const usdAmt   = cashUSDkrw;                     // 달러 예수금
-  const riskPct  = grandTotal > 0 ? riskAmt  / grandTotal * 100 : 0;
-  const krwPct   = grandTotal > 0 ? krwAmt   / grandTotal * 100 : 0;
-  const usdPct   = grandTotal > 0 ? usdAmt   / grandTotal * 100 : 0;
-  const goldPct  = grandTotal > 0 ? goldEtfAmt / grandTotal * 100 : 0;
-  const bondPct  = grandTotal > 0 ? bondEtfAmt / grandTotal * 100 : 0;
+  const riskAmt  = totalStockInvest + otherEtfAmt;
+  const krwAmt   = totalDep + cashKRW;
+  const usdAmt   = cashUSDkrw;
+  const riskPct  = grandTotal > 0 ? riskAmt     / grandTotal * 100 : 0;
+  const krwPct   = grandTotal > 0 ? krwAmt      / grandTotal * 100 : 0;
+  const usdPct   = grandTotal > 0 ? usdAmt      / grandTotal * 100 : 0;
+  const goldPct  = grandTotal > 0 ? goldEtfAmt  / grandTotal * 100 : 0;
+  const bondPct  = grandTotal > 0 ? bondEtfAmt  / grandTotal * 100 : 0;
 
   document.getElementById('heroTotal').textContent = fmt(grandTotal)+'원';
   document.getElementById('donutCenter').textContent = Math.round(grandTotal/10000).toLocaleString()+'만';
@@ -599,17 +614,16 @@ function render(etfRows, depRows, tradeRows, cashRows, historyRows, divRows) {
   })();
 
   const dData = [
-    {label:'ETF',      val:totalEtfEval,    color:'#7c5ce4'},
-    {label:'주식',     val:totalStockInvest,color:'#ff4d8d'},
-    {label:'예적금',   val:totalDep,        color:'#4f8eff'},
-    {label:'원화 예수금', val:cashKRW,      color:'#00c897'},
-    {label:'달러 예수금', val:cashUSDkrw,   color:'#ffb830'},
+    {label:'ETF',         val:totalEtfEval,    color:'#7c5ce4'},
+    {label:'주식',        val:totalStockInvest,color:'#ff4d8d'},
+    {label:'예적금',      val:totalDep,        color:'#4f8eff'},
+    {label:'원화 예수금', val:cashKRW,         color:'#00c897'},
+    {label:'달러 예수금', val:cashUSDkrw,      color:'#ffb830'},
   ].filter(d=>d.val>0);
   if(donutChart) donutChart.destroy();
   donutChart = new Chart(document.getElementById('donutChart'),{type:'doughnut',data:{labels:dData.map(d=>d.label),datasets:[{data:dData.map(d=>d.val),backgroundColor:dData.map(d=>d.color),borderWidth:3,borderColor:'#fff',hoverOffset:10}]},options:{responsive:true,maintainAspectRatio:false,cutout:'70%',plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>ctx.label+': '+fmt(ctx.raw)+'원 ('+((ctx.raw/grandTotal*100).toFixed(1))+'%)'}}}}});
   document.getElementById('donutLegend').innerHTML = dData.map(d=>`<div class="legend-item"><div class="legend-left"><div class="legend-dot" style="background:${d.color};border-radius:3px;"></div>${d.label}</div><div class="legend-right"><span class="legend-pct">${(d.val/grandTotal*100).toFixed(1)}%</span><span class="legend-val">${fmt(d.val)}</span></div></div>`).join('');
 
-  // 리밸런싱 섹션 렌더링
   renderRebalance(riskPct, krwPct, usdPct, goldPct, bondPct, grandTotal, usdRate);
 
   let histLabels=[], histVals=[];
@@ -618,24 +632,23 @@ function render(etfRows, depRows, tradeRows, cashRows, historyRows, divRows) {
     histLabels=sorted.map(r=>String(r['월']).trim());histVals=sorted.map(r=>cleanNum(r['총자산(자동)']||r['총자산']||0));
     if(histLabels.length>0)document.getElementById('chartSub').textContent=histLabels.length===1?`${histLabels[0]} 기준 · 매월 말 데이터 추가 시 그래프가 쌓입니다`:`${histLabels[0]} ~ ${histLabels[histLabels.length-1]} · ${histLabels.length}개월`;
 
-  // 전월 대비 뱃지
-  const badgeEl = document.getElementById('chartBadge');
-  if (histVals.length >= 2) {
-    const last = histVals[histVals.length - 1];
-    const prev = histVals[histVals.length - 2];
-    const diff = last - prev;
-    const pct = ((diff / prev) * 100).toFixed(1);
-    const sign = diff >= 0 ? '+' : '';
-    const isPos = diff >= 0;
-    badgeEl.innerHTML = `
-      <div style="display:flex;align-items:center;gap:6px;justify-content:flex-end;margin-bottom:4px;">
-        <span style="font-size:11px;color:var(--muted);">전월 대비</span>
-        <span style="background:${isPos?'rgba(0,200,151,0.12)':'rgba(255,91,91,0.12)'};color:${isPos?'var(--green)':'var(--red)'};font-size:13px;font-weight:700;padding:3px 10px;border-radius:20px;">${isPos?'▲':'▼'} ${sign}${pct}%</span>
-      </div>
-      <div style="font-size:11px;color:var(--muted);">${sign}${fmt(Math.abs(diff))}원</div>`;
-  } else {
-    badgeEl.innerHTML = '';
-  }
+    const badgeEl = document.getElementById('chartBadge');
+    if (histVals.length >= 2) {
+      const last = histVals[histVals.length - 1];
+      const prev = histVals[histVals.length - 2];
+      const diff = last - prev;
+      const pct = ((diff / prev) * 100).toFixed(1);
+      const sign = diff >= 0 ? '+' : '';
+      const isPos = diff >= 0;
+      badgeEl.innerHTML = `
+        <div style="display:flex;align-items:center;gap:6px;justify-content:flex-end;margin-bottom:4px;">
+          <span style="font-size:11px;color:var(--muted);">전월 대비</span>
+          <span style="background:${isPos?'rgba(0,200,151,0.12)':'rgba(255,91,91,0.12)'};color:${isPos?'var(--green)':'var(--red)'};font-size:13px;font-weight:700;padding:3px 10px;border-radius:20px;">${isPos?'▲':'▼'} ${sign}${pct}%</span>
+        </div>
+        <div style="font-size:11px;color:var(--muted);">${sign}${fmt(Math.abs(diff))}원</div>`;
+    } else {
+      badgeEl.innerHTML = '';
+    }
   } else {
     const now=new Date();histLabels=[`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`];histVals=[grandTotal];
     document.getElementById('chartSub').textContent='자산히스토리 시트를 추가하면 추이가 표시됩니다';
@@ -645,9 +658,13 @@ function render(etfRows, depRows, tradeRows, cashRows, historyRows, divRows) {
   if(assetChart) assetChart.destroy();
   assetChart = new Chart(document.getElementById('assetChart'),{type:'line',data:{labels:histLabels,datasets:[{label:'총 자산',data:histVals,borderColor:'#7c5ce4',borderWidth:2.5,pointBackgroundColor:'#7c5ce4',pointRadius:histVals.length===1?8:4,pointHoverRadius:histVals.length===1?10:7,fill:true,backgroundColor:gradient,tension:0.45}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${fmt(ctx.raw)}원`}}},scales:{x:{ticks:{font:{size:10},color:'#8892b0',maxRotation:0},grid:{display:false},border:{color:'#e8ecf4'}},y:{ticks:{font:{size:10},color:'#8892b0',stepSize:1000000,callback:v=>(v/10000).toFixed(0)+'만'},grid:{color:'#f5f6fa'},border:{color:'#e8ecf4'}}}}});
 
+  // ─── 환율 출처 배지 포함한 주식·현금 요약 ───
+  const rateBadgeClass = rateSource === 'live' ? 'rate-source-live' : rateSource === 'sheet' ? 'rate-source-sheet' : 'rate-source-fallback';
+  const rateBadgeLabel = rateSource === 'live' ? '🟢 실시간' : rateSource === 'sheet' ? '🟡 시트값' : '🔴 기본값';
+
   document.getElementById('depositList').innerHTML=`${depItems.map((r,i)=>{const icons=['🏦','💰','🏧','💳'];return`<div class="deposit-row"><div class="deposit-left"><div class="deposit-icon" style="background:${['rgba(79,142,255,0.1)','rgba(124,92,228,0.1)','rgba(0,200,151,0.1)','rgba(255,140,66,0.1)'][i%4]};">${icons[i%4]}</div><span class="deposit-name">${r['구분']}</span></div><span class="deposit-val">${fmt(cleanNum(r['잔액']))}원</span></div>`;}).join('')}<div class="deposit-row" style="border-top:2px solid var(--border);margin-top:4px;padding-top:16px;"><div class="deposit-left"><div class="deposit-icon" style="background:rgba(255,77,141,0.1);">💎</div><span class="deposit-name" style="font-weight:700;">합계</span></div><span class="deposit-val" style="color:var(--purple);">${fmt(totalDep)}원</span></div>`;
 
-  document.getElementById('stockCashList').innerHTML=`<div class="stock-row"><span class="stock-label">📈 국장 투자금</span><span class="stock-val">${fmt(krAmt)}원</span></div><div class="stock-row"><span class="stock-label">🌐 미장 투자금</span><span class="stock-val">${fmt(usAmt)}원</span></div><div class="stock-row"><span class="stock-label">💰 실현 손익</span><span class="stock-val ${totalPnl>=0?'pos':'neg'}">${fmtW(totalPnl)}원</span></div><div class="stock-row"><span class="stock-label">🏆 승률</span><span class="stock-val">${totalSoldNames>0?(winners/totalSoldNames*100).toFixed(1)+'%':'—'}</span></div><div class="stock-row" style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px;"><span class="stock-label">🇰🇷 원화 예수금</span><span class="stock-val">${fmt(cashKRW)}원</span></div><div class="stock-row"><span class="stock-label">🇺🇸 달러 예수금</span><span class="stock-val">$${cashUSD.toLocaleString()} <span style="color:var(--muted);font-size:11px;">(${fmt(cashUSDkrw)}원)</span></span></div><div class="stock-row"><span class="stock-label">💱 적용 환율</span><span class="stock-val" style="color:var(--muted);">${fmt(usdRate)}원</span></div><div class="stock-row" style="background:linear-gradient(135deg,rgba(0,200,151,0.08),rgba(0,229,179,0.05));border:1px solid rgba(0,200,151,0.2);"><span class="stock-label" style="font-weight:700;color:var(--green);">💵 예수금 합계</span><span class="stock-val" style="color:var(--green);">${fmt(totalCash)}원</span></div>`;
+  document.getElementById('stockCashList').innerHTML=`<div class="stock-row"><span class="stock-label">📈 국장 투자금</span><span class="stock-val">${fmt(krAmt)}원</span></div><div class="stock-row"><span class="stock-label">🌐 미장 투자금</span><span class="stock-val">${fmt(usAmt)}원</span></div><div class="stock-row"><span class="stock-label">💰 실현 손익</span><span class="stock-val ${totalPnl>=0?'pos':'neg'}">${fmtW(totalPnl)}원</span></div><div class="stock-row"><span class="stock-label">🏆 승률</span><span class="stock-val">${totalSoldNames>0?(winners/totalSoldNames*100).toFixed(1)+'%':'—'}</span></div><div class="stock-row" style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px;"><span class="stock-label">🇰🇷 원화 예수금</span><span class="stock-val">${fmt(cashKRW)}원</span></div><div class="stock-row"><span class="stock-label">🇺🇸 달러 예수금</span><span class="stock-val">$${cashUSD.toLocaleString()} <span style="color:var(--muted);font-size:11px;">(${fmt(cashUSDkrw)}원)</span></span></div><div class="stock-row"><span class="stock-label">💱 적용 환율</span><span class="stock-val" style="color:var(--muted);">${fmt(usdRate)}원 <span class="rate-source-badge ${rateBadgeClass}">${rateBadgeLabel}</span></span></div><div class="stock-row" style="background:linear-gradient(135deg,rgba(0,200,151,0.08),rgba(0,229,179,0.05));border:1px solid rgba(0,200,151,0.2);"><span class="stock-label" style="font-weight:700;color:var(--green);">💵 예수금 합계</span><span class="stock-val" style="color:var(--green);">${fmt(totalCash)}원</span></div>`;
 
   const now=new Date().toLocaleTimeString('ko-KR');
   document.getElementById('sDot').style.background='#00c897';
@@ -660,12 +677,17 @@ async function run() {
   document.getElementById('sDot').style.background='#ffb830';
   document.getElementById('sTxt').textContent='데이터 불러오는 중...';
   try {
-    const [etfR,depR,tradeR,cashR,histR,divR] = await Promise.all([
-      parseCsv(ETF_URL),parseCsv(DEP_URL),parseCsv(TRADE_URL),parseCsv(CASH_URL),
-      HISTORY_URL?parseCsv(HISTORY_URL):Promise.resolve([]),
-      DIV_URL?parseCsv(DIV_URL):Promise.resolve([]),
+    // ─── 구글시트 6개 + 환율 API를 모두 병렬 호출 ───
+    const [etfR, depR, tradeR, cashR, histR, divR, liveRate] = await Promise.all([
+      parseCsv(ETF_URL),
+      parseCsv(DEP_URL),
+      parseCsv(TRADE_URL),
+      parseCsv(CASH_URL),
+      HISTORY_URL ? parseCsv(HISTORY_URL) : Promise.resolve([]),
+      DIV_URL     ? parseCsv(DIV_URL)     : Promise.resolve([]),
+      fetchUsdKrw(),  // ← 환율 API 병렬 호출 (실패해도 null 반환)
     ]);
-    render(etfR,depR,tradeR,cashR,histR||[],divR||[]);
+    render(etfR, depR, tradeR, cashR, histR||[], divR||[], liveRate);
   } catch(e) {
     document.getElementById('sDot').style.background='#ff5b5b';
     document.getElementById('sTxt').textContent='오류: '+e.message;
