@@ -497,13 +497,46 @@ function openStockModal() {
   const rpEl=document.getElementById('modalRealPnl');rpEl.textContent=fmtW(totalPnl)+'원';rpEl.style.color=totalPnl>=0?'#00c897':'#ff5b5b';
   document.getElementById('modalWinRate').textContent=totalSold>0?(winners/totalSold*100).toFixed(1)+'%':'—';
   const colors=['#7c5ce4','#ff4d8d','#4f8eff','#00c897','#ff8c42','#ffb830'];
-  // 종목명 이니셜 아바타 (로고 API 오매칭 문제로 이니셜 방식 사용)
-  const makeInitialAvatar=(name, color)=>{
-    const initials = name.replace(/[^\w가-힣]/g,'').slice(0,2).toUpperCase();
-    const bg = color+'33'; // 20% opacity
-    return `<div style="width:42px;height:42px;border-radius:12px;background:${bg};border:1.5px solid ${color}44;display:flex;align-items:center;justify-content:center;font-family:'Nunito',sans-serif;font-weight:800;font-size:13px;color:${color};flex-shrink:0;letter-spacing:-0.03em;">${initials}</div>`;
+  // 로고 URL 목록 (순서대로 시도, 실패 시 이니셜 fallback)
+  const getLogoUrls=(ticker,isUs)=>{
+    if(!ticker) return [];
+    const t=ticker.replace('.KS','').replace('.KQ','').toUpperCase();
+    if(isUs){
+      return [
+        'https://logo.clearbit.com/'+t.toLowerCase()+'.com',   // Clearbit (도메인 기반, 정확)
+        'https://img.logo.dev/ticker/'+t+'?token=pk_public',   // logo.dev fallback
+      ];
+    }
+    return [
+      'https://file.alphasquare.co.kr/media/images/stock_logo/kr/'+t+'.png',
+    ];
   };
-  const makeCard=(s,isUs)=>{const pct=totalInvest>0?(s.amt/totalInvest*100).toFixed(1):0;const colorIdx=stocks.indexOf(s)%colors.length;const amtDisplay=isUs?'$'+Math.round(s.amt/g_usdRate).toLocaleString()+' <span style="color:var(--muted);font-size:11px;">('+fmt(s.amt)+'원)</span>':fmt(s.amt)+'원';const avatarHtml=makeInitialAvatar(s.name,colors[colorIdx]);return'<div style="display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--bg);border-radius:14px;border:1px solid var(--border);">'+avatarHtml+'<div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:14px;color:var(--text);">'+s.name+'</div><div style="font-size:11px;color:var(--muted);margin-top:2px;">'+(s.ticker?s.ticker+' · ':'')+s.qty.toLocaleString()+'주</div></div><div style="text-align:right;flex-shrink:0;"><div style="font-family:\'Nunito\',sans-serif;font-weight:800;font-size:14px;">'+amtDisplay+'</div><div style="font-size:11px;color:var(--muted);margin-top:2px;">비중 '+pct+'%</div></div></div>';};
+  const makeInitialAvatar=(name,color)=>{
+    const txt=name.replace(/\s/g,'').slice(0,2);
+    return '<div style="width:42px;height:42px;border-radius:12px;background:'+color+'22;border:1.5px solid '+color+'44;display:flex;align-items:center;justify-content:center;font-family:\'Nunito\',sans-serif;font-weight:800;font-size:13px;color:'+color+';flex-shrink:0;letter-spacing:-0.02em;">'+txt+'</div>';
+  };
+  // 여러 URL을 순차 시도 후 모두 실패하면 이니셜
+  const makeLogoHtml=(ticker,isUs,name,color)=>{
+    const urls=getLogoUrls(ticker,isUs);
+    if(!urls.length) return makeInitialAvatar(name,color);
+    // img 체인: onerror로 다음 URL 시도, 모두 실패하면 이니셜 div 표시
+    const initial=makeInitialAvatar(name,color);
+    let html='';
+    for(let i=urls.length-1;i>=0;i--){
+      if(i===urls.length-1){
+        // 마지막 URL: 실패 시 이니셜
+        html='<img src="'+urls[i]+'" style="width:42px;height:42px;border-radius:12px;object-fit:contain;background:#fff;flex-shrink:0;" '
+          +'onerror="this.outerHTML=\''+initial.replace(/'/g,"\\'")+'\';">';
+      } else {
+        // 앞 URL: 실패 시 다음 img로
+        const next=html.replace(/'/g,"\\'");
+        html='<img src="'+urls[i]+'" style="width:42px;height:42px;border-radius:12px;object-fit:contain;background:#fff;flex-shrink:0;" '
+          +'onerror="this.outerHTML=\''+next+'\';">';
+      }
+    }
+    return html;
+  };
+  const makeCard=(s,isUs)=>{const pct=totalInvest>0?(s.amt/totalInvest*100).toFixed(1):0;const colorIdx=stocks.indexOf(s)%colors.length;const amtDisplay=isUs?'$'+Math.round(s.amt/g_usdRate).toLocaleString()+' <span style="color:var(--muted);font-size:11px;">('+fmt(s.amt)+'원)</span>':fmt(s.amt)+'원';const logoHtml=makeLogoHtml(s.ticker,isUs,s.name,colors[colorIdx]);return'<div style="display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--bg);border-radius:14px;border:1px solid var(--border);">'+logoHtml+'<div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:14px;color:var(--text);">'+s.name+'</div><div style="font-size:11px;color:var(--muted);margin-top:2px;">'+(s.ticker?s.ticker+' · ':'')+s.qty.toLocaleString()+'주</div></div><div style="text-align:right;flex-shrink:0;"><div style="font-family:\'Nunito\',sans-serif;font-weight:800;font-size:14px;">'+amtDisplay+'</div><div style="font-size:11px;color:var(--muted);margin-top:2px;">비중 '+pct+'%</div></div></div>';};
   document.getElementById('modalKrList').innerHTML=krStocks.length>0?krStocks.map(s=>makeCard(s,false)).join(''):'<div style="color:var(--muted);font-size:13px;text-align:center;padding:16px 0;">보유 종목 없음</div>';
   document.getElementById('modalUsList').innerHTML=usStocks.length>0?usStocks.map(s=>makeCard(s,true)).join(''):'<div style="color:var(--muted);font-size:13px;text-align:center;padding:16px 0;">보유 종목 없음</div>';
   document.getElementById('stockModal').style.display='block';
